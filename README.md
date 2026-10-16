@@ -70,7 +70,7 @@ Ouvre une [issue](../../issues) en décrivant ce que tu faisais, ce qui s'est pa
 App SwiftUI (macOS 14+, prête pour iOS 17+), sans dépendance externe. Il faut Xcode installé.
 
 ```bash
-git clone https://github.com/FelixSphinx123456/Budget.git
+git clone https://github.com/Fantinl/Budget.git
 cd Budget
 ./build-app.sh             # crée build/Budget.app (binaire universel)
 ./build-app.sh --install   # et la copie dans /Applications
