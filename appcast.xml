@@ -5,5 +5,14 @@
     <title>Budget</title>
     <link>https://github.com/Fantinl/Budget</link>
     <language>fr</language>
+    <item>
+      <title>Budget 0.2.0</title>
+      <pubDate>Sat, 17 Oct 2026 11:25:02 +0200</pubDate>
+      <sparkle:version>3</sparkle:version>
+      <sparkle:shortVersionString>0.2.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>Mises à jour automatiques, icône, raccourcis clavier (⌘/), taux des livrets automatiques</p>]]></description>
+      <enclosure url="https://github.com/Fantinl/Budget/releases/download/v0.2.0/Budget.zip" type="application/octet-stream" sparkle:edSignature="jVYKAGUVi/zVUhvP1sMkVD9bJoMTKLbyZ6NNJ01Faqt9UjHlpz3RBLFhazpA6lHhHMklWv/zVP4/IFmWDtnADw==" length="5879607" />
+    </item>
   </channel>
 </rss>
