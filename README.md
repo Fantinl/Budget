@@ -1,3 +1,5 @@
+<p align="center"><img src="Support/AppIcon-1024.png" width="128" alt="Icône de Budget"></p>
+
 # Budget
 
 Une app Mac simple pour suivre ses dépenses, ses revenus et ses comptes.
@@ -10,7 +12,7 @@ Une app Mac simple pour suivre ses dépenses, ses revenus et ses comptes.
 - Import de relevés bancaires (CSV, OFX), export CSV, sauvegardes automatiques
 - Mode clair / sombre, deux styles visuels
 
-> ⚠️ Version de test. Les données restent sur ton Mac (rien n'est envoyé sur internet), mais garde l'esprit « bêta » : fais un export de temps en temps (Réglages → Données).
+> ⚠️ Version de test. Tes données de budget restent sur ton Mac et ne sont jamais envoyées. L'app se connecte seulement à GitHub pour vérifier s'il existe une nouvelle version et pour récupérer les taux des livrets réglementés. Garde l'esprit « bêta » : fais un export de temps en temps (Réglages → Données).
 
 ## Télécharger et installer
 
@@ -33,20 +35,32 @@ Une app Mac simple pour suivre ses dépenses, ses revenus et ses comptes.
    ```
    </details>
 
+### Mises à jour
+
+À partir de la version 0.2, l'app vérifie chaque jour s'il existe une nouvelle version et propose de l'installer en un clic (ou via **Budget ▸ Rechercher des mises à jour…**). Tes données sont conservées.
+Si tu as la version 0.1, télécharge une dernière fois la nouvelle version à la main : les suivantes arriveront toutes seules.
+
 Au premier lancement, un assistant te fait configurer ton compte principal, tes opérations récurrentes et tes ajouts rapides (tout est modifiable ensuite dans les Réglages, ⌘,).
 
 ## Raccourcis utiles
 
+La liste complète est dans **Aide ▸ Raccourcis clavier** (⌘/) ou dans les Réglages. Les actions principales sont aussi dans le menu **Opérations**.
+
 | Raccourci | Action |
 |---|---|
+| ⌘, | Réglages |
+| ⌘/ | Raccourcis clavier |
+| ⌘Z / ⇧⌘Z | Annuler / rétablir |
 | ⌘N | Nouvelle opération |
 | ⌘E | Saisie express (« café 2,5 », « courses 45 hier », « +1800 salaire ») |
-| ⌘1 … ⌘9 | Ajouts rapides |
 | ⌘F | Rechercher |
+| ⌘1 … ⌘9 | Ajouts rapides |
 | ⌘← / ⌘→ | Mois précédent / suivant |
-| ⌘Z / ⇧⌘Z | Annuler / rétablir |
-| ⌘-clic, ⇧-clic, ⌘A | Sélection multiple (puis changer la catégorie, le compte, supprimer…) |
-| ⌘, | Réglages |
+| ⌘-clic, ⇧-clic | Sélection multiple / plage |
+| ⌘A | Tout sélectionner |
+| ⌫ | Supprimer la sélection |
+| Échap | Annuler la sélection / vider la recherche |
+| ↩ / ⌥↩ (saisie express) | Enregistrer / ouvrir le formulaire complet |
 
 Dans les champs montant, tu peux taper un calcul : `12,5+8` → 20,50 €.
 Pour importer un relevé, glisse le fichier CSV de ta banque sur la fenêtre.
@@ -67,7 +81,7 @@ Ouvre une [issue](../../issues) en décrivant ce que tu faisais, ce qui s'est pa
 
 ## Pour les développeurs
 
-App SwiftUI (macOS 14+, prête pour iOS 17+), sans dépendance externe. Il faut Xcode installé.
+App SwiftUI (macOS 14+, prête pour iOS 17+). Seule dépendance : Sparkle (mises à jour). Il faut Xcode installé.
 
 ```bash
 git clone https://github.com/Fantinl/Budget.git
@@ -76,5 +90,13 @@ cd Budget
 ./build-app.sh --install   # et la copie dans /Applications
 ./build-app.sh --zip       # et crée build/Budget.zip (pour une release)
 ```
+
+Publier une nouvelle version pour les testeurs (compile, crée la release GitHub, signe la mise à jour et l'annonce dans `appcast.xml`) :
+
+```bash
+./release.sh 0.3.0 "Ce qui change dans cette version"
+```
+
+Les mises à jour passent par [Sparkle](https://sparkle-project.org) : la clé de signature privée est dans le trousseau du Mac qui publie (la clé publique est dans `Support/Info.plist`). L'icône se régénère avec `swift Tools/make-icon.swift`.
 
 Le style visuel est centralisé dans `Sources/Budget/Theme.swift` : pour créer un nouveau style, copier `Theme.minimal`, changer les valeurs et l'ajouter à `Theme.all` (il apparaît dans Réglages → Apparence).

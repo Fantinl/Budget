@@ -7,6 +7,9 @@ struct BudgetApp: App {
     @AppStorage("themeID") private var themeID = Theme.current.id
     /// Clair / sombre / automatique, choisi dans les réglages.
     @AppStorage("appearance") private var appearance = AppearanceMode.system
+    #if os(macOS)
+    @StateObject private var updater = AppUpdater()
+    #endif
 
     var body: some Scene {
         WindowGroup {
@@ -26,8 +29,27 @@ struct BudgetApp: App {
         #if os(macOS)
         .defaultSize(width: 820, height: 780)
         #endif
+        .commands {
+            #if os(macOS)
+            CommandGroup(after: .appInfo) {
+                CheckForUpdatesCommand(updater: updater)
+            }
+            CommandGroup(before: .help) {
+                ShortcutsHelpCommand()
+            }
+            #endif
+            OperationsCommands()
+        }
 
         #if os(macOS)
+        Window("Raccourcis clavier", id: "shortcuts") {
+            ShortcutsView()
+                .environment(store)
+                .environment(\.theme, Theme.named(themeID))
+                .frame(minWidth: 460, minHeight: 480)
+        }
+        .defaultSize(width: 520, height: 680)
+
         Settings {
             SettingsView()
                 .environment(store)

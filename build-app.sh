@@ -18,9 +18,22 @@ BIN_DIR="$(swift build -c release "${ARCHS[@]}" --show-bin-path)"
 
 APP="build/Budget.app"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 cp "$BIN_DIR/Budget" "$APP/Contents/MacOS/Budget"
 cp Support/Info.plist "$APP/Contents/Info.plist"
+[[ -f Support/AppIcon.icns ]] && cp Support/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+
+# Sparkle (mises à jour) : framework embarqué, liens symboliques préservés.
+SPARKLE="$(find .build/artifacts -path '*macos-arm64_x86_64/Sparkle.framework' -maxdepth 6 | head -1)"
+ditto "$SPARKLE" "$APP/Contents/Frameworks/Sparkle.framework"
+
+# Signature ad hoc (pas de compte Apple Developer) : composants de Sparkle d'abord, puis l'app.
+for item in "$APP"/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/*.xpc \
+            "$APP"/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate \
+            "$APP"/Contents/Frameworks/Sparkle.framework/Versions/B/Updater.app \
+            "$APP"/Contents/Frameworks/Sparkle.framework; do
+    [[ -e "$item" ]] && codesign --force --sign - "$item"
+done
 codesign --force --sign - "$APP"
 
 echo "✅ $APP créé"

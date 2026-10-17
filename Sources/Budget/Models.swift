@@ -212,10 +212,15 @@ struct Account: Identifiable, Codable, Hashable {
     /// Valeur actuelle saisie pour un placement (PEA, assurance vie…), et sa date.
     var marketValue: Decimal?
     var marketValueDate: Date?
+    /// nil/true = taux réglementé automatique (si le type le permet) ; false = taux saisi à la main.
+    var autoRate: Bool?
+    /// Date d'ouverture d'un PEL : détermine son taux.
+    var openingDate: Date?
 
     init(id: String = UUID().uuidString, name: String, kind: AccountKind, colorIndex: Int,
          initialBalance: Decimal = 0, isArchived: Bool = false, bank: String? = nil,
-         interestRate: Decimal? = nil, marketValue: Decimal? = nil, marketValueDate: Date? = nil) {
+         interestRate: Decimal? = nil, marketValue: Decimal? = nil, marketValueDate: Date? = nil,
+         autoRate: Bool? = nil, openingDate: Date? = nil) {
         self.id = id
         self.name = name
         self.kind = kind
@@ -226,6 +231,8 @@ struct Account: Identifiable, Codable, Hashable {
         self.interestRate = interestRate
         self.marketValue = marketValue
         self.marketValueDate = marketValueDate
+        self.autoRate = autoRate
+        self.openingDate = openingDate
     }
 
     // Type inconnu (fichier d'une version future) → compte courant, plutôt que d'échouer.
@@ -241,6 +248,8 @@ struct Account: Identifiable, Codable, Hashable {
         interestRate = try c.decodeIfPresent(Decimal.self, forKey: .interestRate)
         marketValue = try c.decodeIfPresent(Decimal.self, forKey: .marketValue)
         marketValueDate = try c.decodeIfPresent(Date.self, forKey: .marketValueDate)
+        autoRate = try c.decodeIfPresent(Bool.self, forKey: .autoRate)
+        openingDate = try c.decodeIfPresent(Date.self, forKey: .openingDate)
     }
 
     /// Libellé de banque pour le regroupement.

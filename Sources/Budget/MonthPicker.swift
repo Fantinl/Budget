@@ -9,8 +9,6 @@ struct MonthPicker: View {
     var mode: Mode = .month
     /// Débuts de mois ayant des opérations.
     var monthsWithData: Set<Date> = []
-    /// Active ⌘← / ⌘→ sur les flèches.
-    var shortcuts = false
 
     @State private var showPopover = false
 
@@ -31,7 +29,6 @@ struct MonthPicker: View {
     var body: some View {
         HStack(spacing: theme.spacing) {
             arrow("chevron.left", label: "Précédent", disabled: false) { selection = selection.addingMonths(-step) }
-                .optionalShortcut(.leftArrow, enabled: shortcuts)
 
             Button { showPopover = true } label: {
                 HStack(spacing: 6) {
@@ -62,7 +59,6 @@ struct MonthPicker: View {
                   disabled: selection.addingMonths(step) > currentStart) {
                 selection = selection.addingMonths(step)
             }
-            .optionalShortcut(.rightArrow, enabled: shortcuts)
         }
     }
 
@@ -84,13 +80,6 @@ private extension Date {
     /// Début de mois, ou début d'année selon le mode.
     func normalized(for mode: MonthPicker.Mode) -> Date {
         mode == .month ? startOfMonth : (Calendar.current.dateInterval(of: .year, for: self)?.start ?? self)
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func optionalShortcut(_ key: KeyEquivalent, enabled: Bool) -> some View {
-        if enabled { keyboardShortcut(key, modifiers: .command) } else { self }
     }
 }
 

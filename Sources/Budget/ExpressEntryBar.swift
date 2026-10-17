@@ -41,14 +41,8 @@ struct ExpressEntryBar: View {
             }
         }
         .animation(.smooth(duration: 0.2), value: trimmed.isEmpty)
-        .background {
-            #if os(macOS)
-            // ⌘E : place le curseur dans le champ.
-            Button("") { focused = true }
-                .keyboardShortcut("e", modifiers: .command)
-                .opacity(0).frame(width: 0, height: 0).accessibilityHidden(true)
-            #endif
-        }
+        // ⌘E (menu Opérations) : place le curseur dans le champ.
+        .onReceive(NotificationCenter.default.publisher(for: .focusExpressEntry)) { _ in focused = true }
     }
 
     // MARK: Champ

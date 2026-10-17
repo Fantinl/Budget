@@ -62,6 +62,7 @@ struct RootView: View {
             // Au lancement : sauvegarde du jour, puis échéances récurrentes passées.
             store.backupIfNeeded()
             store.generateDueRecurringOperations()
+            await store.refreshRates() // taux des livrets réglementés (au plus une fois par semaine)
         }
     }
 

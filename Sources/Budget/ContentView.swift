@@ -78,7 +78,7 @@ struct ContentView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: theme.padding) {
                     if let currentAccount { accountHeader(currentAccount) }
-                    MonthPicker(selection: $month, mode: .month, monthsWithData: monthsWithData, shortcuts: true)
+                    MonthPicker(selection: $month, mode: .month, monthsWithData: monthsWithData)
                         .frame(maxWidth: .infinity)
                     FilterChips(filter: $filter)
                     ExpressEntryBar(accountID: accountID) { draft = Draft(transaction: $0, isNew: true) }
@@ -140,6 +140,7 @@ struct ContentView: View {
                 if !new.isEmpty { listFocused = true }
             }
             .background { selectionShortcuts }
+            .focusedSceneValue(\.operationActions, operationActions)
             .confirmationDialog(deleteTitle, isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("Supprimer", role: .destructive) {
                     store.deleteTransactions(ids: selection)
@@ -396,12 +397,6 @@ struct ContentView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .frame(width: 150)
-        .background {
-            // ⌘F place le curseur dans la recherche
-            Button("Rechercher") { searchFocused = true }
-                .keyboardShortcut("f", modifiers: .command)
-                .hidden()
-        }
         .help("Rechercher (⌘F)")
     }
     #endif
@@ -409,12 +404,7 @@ struct ContentView: View {
     /// Bouton flottant « Ajouter », bien visible en bas à droite.
     private var addButton: some View {
         Button {
-            var transaction = Transaction.empty(categoryID: store.categories(for: .expense).first?.id ?? "")
-            // Si on regarde un autre mois, on pré-remplit une date dans ce mois-là.
-            if month != Date.now.startOfMonth { transaction.date = month }
-            // Compte de la vue s'il y en a un, sinon le compte par défaut (réglages).
-            transaction.accountID = store.accountIDForNewTransaction(accountID)
-            draft = Draft(transaction: transaction, isNew: true)
+            startNewOperation()
         } label: {
             Label("Ajouter", systemImage: "plus")
                 .font(theme.titleFont)
@@ -426,7 +416,35 @@ struct ContentView: View {
                 .contentShape(.capsule)
         }
         .buttonStyle(.plain)
-        .keyboardShortcut("n", modifiers: .command)
         .help("Nouvelle opération (⌘N)")
+    }
+
+    /// Nouvelle opération vide (mois et compte de la vue).
+    private func startNewOperation() {
+        var transaction = Transaction.empty(categoryID: store.categories(for: .expense).first?.id ?? "")
+        // Si on regarde un autre mois, on pré-remplit une date dans ce mois-là.
+        if month != Date.now.startOfMonth { transaction.date = month }
+        // Compte de la vue s'il y en a un, sinon le compte par défaut (réglages).
+        transaction.accountID = store.accountIDForNewTransaction(accountID)
+        draft = Draft(transaction: transaction, isNew: true)
+    }
+
+    /// Actions proposées au menu Opérations (⌘N, ⌘E, ⌘F, ⌘←, ⌘→).
+    private var operationActions: OperationActions {
+        OperationActions(
+            newOperation: startNewOperation,
+            expressEntry: { NotificationCenter.default.post(name: .focusExpressEntry, object: nil) },
+            search: searchAction,
+            previousMonth: { month = month.addingMonths(-1) },
+            nextMonth: month.addingMonths(1) > Date.now.startOfMonth ? nil : { month = month.addingMonths(1) }
+        )
+    }
+
+    private var searchAction: (() -> Void)? {
+        #if os(macOS)
+        return { searchFocused = true }
+        #else
+        return nil
+        #endif
     }
 }

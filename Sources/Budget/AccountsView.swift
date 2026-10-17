@@ -72,6 +72,7 @@ struct AccountsView: View {
                 .padding(theme.padding)
             }
             .screenBackground()
+            .task { await store.refreshRates() }
             .navigationTitle("Comptes")
             .navigationDestination(for: String.self) { id in
                 AccountDetailView(accountID: id)

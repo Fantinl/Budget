@@ -102,6 +102,9 @@ struct AccountDraft: Identifiable {
 
     var showsRate: Bool { account.kind.family == .savings }
 
+    /// Taux réglementé automatique actif pour ce brouillon.
+    var autoRateActive: Bool { account.kind.hasRegulatedRate && account.autoRate != false }
+
     /// Nom proposé : « Livret A », « Compte courant Boursorama », « PEA Trade Republic ».
     var suggestedName: String {
         let base = account.kind.label
@@ -124,7 +127,9 @@ struct AccountDraft: Identifiable {
         result.name = name
         result.initialBalance = balance
         result.bank = (trimmedBank.isEmpty || account.kind == .cash) ? nil : trimmedBank
-        if showsRate && !Self.isBlank(rateText) {
+        if !account.kind.hasRegulatedRate { result.autoRate = nil }
+        if account.kind != .pel { result.openingDate = nil }
+        if showsRate && !autoRateActive && !Self.isBlank(rateText) {
             guard let rate = Self.parse(rateText) else { return nil }
             result.interestRate = rate
         } else {
@@ -397,7 +402,7 @@ struct AccountEditorSheet: View {
                  : "Le solde actuel = solde initial + revenus − dépenses du compte. Peut être négatif.")
             if draft.showsRate {
                 Divider().overlay(theme.separator)
-                amountRow("Taux annuel", text: $draft.rateText, prompt: "Facultatif", unit: "%")
+                rateSection
             }
             if kind.hasMarketValue {
                 Divider().overlay(theme.separator)
@@ -407,6 +412,45 @@ struct AccountEditorSheet: View {
                 hint("À mettre à jour de temps en temps depuis ton appli de banque.")
             }
         }
+    }
+
+    @ViewBuilder private var rateSection: some View {
+        if kind.hasRegulatedRate {
+            Toggle("Taux automatique (réglementé)", isOn: Binding(
+                get: { draft.account.autoRate != false },
+                set: { draft.account.autoRate = $0 ? nil : false }
+            ))
+            .foregroundStyle(theme.textPrimary)
+            .tint(theme.accent)
+            if kind == .pel {
+                DatePicker("Date d'ouverture", selection: Binding(
+                    get: { draft.account.openingDate ?? .now },
+                    set: { draft.account.openingDate = $0 }
+                ), in: ...Date.now, displayedComponents: .date)
+                    .foregroundStyle(theme.textPrimary)
+            }
+            if draft.autoRateActive {
+                hint(autoRateText)
+            } else {
+                amountRow("Taux annuel", text: $draft.rateText, prompt: "Facultatif", unit: "%")
+            }
+        } else {
+            amountRow("Taux annuel", text: $draft.rateText, prompt: "Facultatif", unit: "%")
+            hint("Taux propre à ta banque : à saisir.")
+        }
+    }
+
+    private var autoRateText: String {
+        var probe = draft.account
+        if kind == .pel && probe.openingDate == nil { probe.openingDate = .now }
+        guard let regulated = store.regulatedRate(for: probe) else {
+            return "Taux non disponible pour cette date d'ouverture."
+        }
+        let rate = regulated.rate.formatted(.number.precision(.fractionLength(0...2)))
+        let since = regulated.since.map { " depuis le " + $0.formatted(.dateTime.day().month(.wide).year().locale(Locale(identifier: "fr_FR"))) } ?? ""
+        let prefix = regulated.isMinimum ? "Minimum " : ""
+        let suffix = kind == .pel ? " (fixé à l'ouverture)" : regulated.isMinimum ? " : ta banque peut proposer plus" : ""
+        return "\(prefix)\(rate) %\(since)\(suffix)"
     }
 
     private var colorSection: some View {

@@ -65,10 +65,17 @@ struct AccountCardContent: View {
         if account.kind.hasMarketValue {
             investmentDetails
         }
-        if let rate = account.interestRate {
-            Label("Taux \(rate.formatted(.number.precision(.fractionLength(0...2)))) %", systemImage: "percent")
-                .font(theme.captionFont)
-                .foregroundStyle(theme.textSecondary)
+        if let rate = store.effectiveRate(for: account) {
+            let auto = account.usesAutoRate && store.regulatedRate(for: account) != nil
+            let minimum = auto && account.kind == .livretJeune
+            HStack(spacing: 6) {
+                Label("Taux \(minimum ? "min. " : "")\(rate.formatted(.number.precision(.fractionLength(0...2)))) %", systemImage: "percent")
+                    .foregroundStyle(theme.textSecondary)
+                if auto {
+                    Text("réglementé").foregroundStyle(theme.textTertiary)
+                }
+            }
+            .font(theme.captionFont)
         }
     }
 
