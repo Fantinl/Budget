@@ -6,6 +6,15 @@
     <link>https://github.com/Fantinl/Budget</link>
     <language>fr</language>
     <item>
+      <title>Budget 0.3.0</title>
+      <pubDate>Sat, 17 Oct 2026 12:25:08 +0200</pubDate>
+      <sparkle:version>4</sparkle:version>
+      <sparkle:shortVersionString>0.3.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>Barre des menus (option à activer dans les Réglages) : saisie express, ajouts rapides et budgets en un clic, raccourci ⌥⌘B</p>]]></description>
+      <enclosure url="https://github.com/Fantinl/Budget/releases/download/v0.3.0/Budget.zip" type="application/octet-stream" sparkle:edSignature="nY6jw2oRiZ+9WWag4nwxQGKx0oWeM0QXIxY5fUlrhXiibGc/Gv46Y046hbvrVjpxJDbfr1SkcYnVcehzWzDKAg==" length="6013180" />
+    </item>
+    <item>
       <title>Budget 0.2.0</title>
       <pubDate>Sat, 17 Oct 2026 11:25:02 +0200</pubDate>
       <sparkle:version>3</sparkle:version>
