@@ -23,6 +23,7 @@ struct ShortcutsView: View {
             Item(action: "Raccourcis clavier", keys: ["⌘", "/"]),
             Item(action: "Annuler", keys: ["⌘", "Z"]),
             Item(action: "Rétablir", keys: ["⇧", "⌘", "Z"]),
+            Item(action: "Panneau de la barre des menus (si activée)", keys: ["⌥", "⌘", "B"]),
         ]),
         Group(title: "Opérations", icon: "list.bullet", items: [
             Item(action: "Nouvelle opération", keys: ["⌘", "N"]),

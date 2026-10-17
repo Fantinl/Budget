@@ -82,3 +82,58 @@ private struct SettingsThemePreview: View {
         )
     }
 }
+
+#if os(macOS)
+import ServiceManagement
+
+/// Section « Barre des menus » : icône facultative, ouverture au démarrage, raccourci global.
+struct SettingsMenuBarSection: View {
+    @AppStorage(MenuBarSettings.enabled) private var enabled = false
+    @AppStorage(MenuBarSettings.hotKey) private var hotKeyEnabled = true
+    @State private var status = SMAppService.mainApp.status
+    @State private var errorMessage: String?
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        Section {
+            Toggle("Afficher Budget dans la barre des menus", isOn: $enabled)
+            if enabled {
+                Toggle("Ouvrir au démarrage du Mac", isOn: Binding(
+                    get: { status == .enabled || status == .requiresApproval },
+                    set: setLaunchAtLogin
+                ))
+                if status == .requiresApproval {
+                    HStack {
+                        Text("À autoriser dans Réglages Système › Général › Ouverture.")
+                            .font(theme.captionFont).foregroundStyle(theme.textSecondary)
+                        Spacer()
+                        Button("Ouvrir les Réglages Système") { SMAppService.openSystemSettingsLoginItems() }
+                    }
+                }
+                if let errorMessage {
+                    Text(errorMessage).font(theme.captionFont).foregroundStyle(theme.negative)
+                }
+                Toggle("Raccourci global ⌥⌘B", isOn: $hotKeyEnabled)
+            }
+        } header: {
+            Text("Barre des menus")
+        } footer: {
+            Text("L'icône reste disponible même fenêtre fermée. Quitter Budget (⌘Q) l'arrête.")
+                .font(theme.captionFont).foregroundStyle(theme.textSecondary)
+        }
+        .onAppear { status = SMAppService.mainApp.status }
+        .onChange(of: enabled) { status = SMAppService.mainApp.status; errorMessage = nil }
+    }
+
+    private func setLaunchAtLogin(_ on: Bool) {
+        errorMessage = nil
+        do {
+            if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+        } catch {
+            errorMessage = "Impossible de modifier l'ouverture au démarrage. L'app n'étant pas signée par Apple, "
+                + "cela peut échouer si elle n'est pas dans le dossier Applications. (\(error.localizedDescription))"
+        }
+        status = SMAppService.mainApp.status
+    }
+}
+#endif

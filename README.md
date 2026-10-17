@@ -10,6 +10,7 @@ Une app Mac simple pour suivre ses dépenses, ses revenus et ses comptes.
 - Opérations récurrentes (loyer, salaire, abonnements) créées automatiquement
 - Statistiques, prévision du solde de fin de mois
 - Import de relevés bancaires (CSV, OFX), export CSV, sauvegardes automatiques
+- Icône facultative dans la barre des menus (désactivée par défaut) : solde, saisie express et ajouts rapides sans ouvrir l'app
 - Mode clair / sombre, deux styles visuels
 
 > ⚠️ Version de test. Tes données de budget restent sur ton Mac et ne sont jamais envoyées. L'app se connecte seulement à GitHub pour vérifier s'il existe une nouvelle version et pour récupérer les taux des livrets réglementés. Garde l'esprit « bêta » : fais un export de temps en temps (Réglages → Données).
@@ -55,6 +56,7 @@ La liste complète est dans **Aide ▸ Raccourcis clavier** (⌘/) ou dans les R
 | ⌘E | Saisie express (« café 2,5 », « courses 45 hier », « +1800 salaire ») |
 | ⌘F | Rechercher |
 | ⌘1 … ⌘9 | Ajouts rapides |
+| ⌥⌘B | Panneau de la barre des menus (si activée dans les Réglages) |
 | ⌘← / ⌘→ | Mois précédent / suivant |
 | ⌘-clic, ⇧-clic | Sélection multiple / plage |
 | ⌘A | Tout sélectionner |

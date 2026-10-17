@@ -9,10 +9,18 @@ struct BudgetApp: App {
     @AppStorage("appearance") private var appearance = AppearanceMode.system
     #if os(macOS)
     @StateObject private var updater = AppUpdater()
+    /// Icône facultative dans la barre des menus (désactivée par défaut).
+    @AppStorage(MenuBarSettings.enabled) private var menuBarEnabled = false
     #endif
 
+    init() {
+        #if os(macOS)
+        MenuBarCoordinator.shared.start()
+        #endif
+    }
+
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             RootView()
                 .environment(store)
                 .environment(\.theme, Theme.named(themeID))
@@ -49,6 +57,15 @@ struct BudgetApp: App {
                 .frame(minWidth: 460, minHeight: 480)
         }
         .defaultSize(width: 520, height: 680)
+
+        MenuBarExtra(isInserted: $menuBarEnabled) {
+            MenuBarPanel()
+                .environment(store)
+                .environment(\.theme, Theme.named(themeID))
+        } label: {
+            MenuBarLabel()
+        }
+        .menuBarExtraStyle(.window)
 
         Settings {
             SettingsView()

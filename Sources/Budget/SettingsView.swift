@@ -50,6 +50,9 @@ struct SettingsView: View {
                         .foregroundStyle(theme.textSecondary)
                 }
                 SettingsAppearanceSection()
+                #if os(macOS)
+                SettingsMenuBarSection()
+                #endif
                 Section {
                     Button {
                         #if os(macOS)
