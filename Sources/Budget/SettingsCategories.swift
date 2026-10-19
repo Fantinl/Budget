@@ -45,7 +45,7 @@ struct SettingsCategoriesView: View {
         Section(kind == .expense ? "Dépenses" : "Revenus") {
             let visible = store.categories(for: kind)
             ForEach(visible) { category in
-                row(category)
+                row(category, visible: visible)
             }
             .onMove { source, destination in
                 move(visible, kind: kind, from: source, to: destination)
@@ -82,10 +82,23 @@ struct SettingsCategoriesView: View {
         store.moveCategories(of: kind, from: fullSource, to: fullDestination)
     }
 
-    private func row(_ category: Category) -> some View {
+    /// Déplace une catégorie d'un cran (ou en tête / en fin) parmi les catégories visibles de son type.
+    private func reorder(_ category: Category, in visible: [Category], _ movement: ReorderMove) {
+        guard let index = visible.firstIndex(where: { $0.id == category.id }) else { return }
+        move(visible, kind: category.kind, from: [index],
+             to: movement.destination(from: index, count: visible.count))
+    }
+
+    private func row(_ category: Category, visible: [Category] = []) -> some View {
         let isProtected = store.isProtected(category)
         let usage = store.usageCount(of: category)
+        let index = visible.firstIndex { $0.id == category.id }
+        let canUp = (index ?? 0) > 0
+        let canDown = index.map { $0 < visible.count - 1 } ?? false
         return HStack(spacing: theme.spacing) {
+            if index != nil {
+                ReorderButtons(canMoveUp: canUp, canMoveDown: canDown) { reorder(category, in: visible, $0) }
+            }
             Button {
                 editing = SettingsCategoryDraft(category: category)
             } label: {
@@ -140,6 +153,10 @@ struct SettingsCategoriesView: View {
             .tint(theme.textTertiary)
         }
         .contextMenu {
+            if index != nil {
+                ReorderMenuItems(canMoveUp: canUp, canMoveDown: canDown) { reorder(category, in: visible, $0) }
+                Divider()
+            }
             Button("Modifier") { editing = SettingsCategoryDraft(category: category) }
             Button(category.isHidden ? "Réafficher" : "Masquer") { toggleHidden(category) }
             if !isProtected {

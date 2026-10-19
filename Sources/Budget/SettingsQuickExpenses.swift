@@ -10,6 +10,12 @@ struct SettingsQuickExpensesView: View {
         List {
             Section {
                 ForEach(store.quickExpenses) { quick in
+                    let index = store.quickExpenses.firstIndex { $0.id == quick.id } ?? 0
+                    let count = store.quickExpenses.count
+                    HStack(spacing: theme.spacing) {
+                    ReorderButtons(canMoveUp: index > 0, canMoveDown: index < count - 1) { movement in
+                        store.moveQuickExpenses(from: [index], to: movement.destination(from: index, count: count))
+                    }
                     Button {
                         editing = SettingsQuickDraft(quick: quick)
                     } label: {
@@ -31,12 +37,17 @@ struct SettingsQuickExpensesView: View {
                         .contentShape(.rect)
                     }
                     .buttonStyle(.plain)
+                    }
                     .swipeActions {
                         Button(role: .destructive) { store.deleteQuickExpense(quick) } label: {
                             Label("Supprimer", systemImage: "trash")
                         }
                     }
                     .contextMenu {
+                        ReorderMenuItems(canMoveUp: index > 0, canMoveDown: index < count - 1) { movement in
+                            store.moveQuickExpenses(from: [index], to: movement.destination(from: index, count: count))
+                        }
+                        Divider()
                         Button("Supprimer", role: .destructive) { store.deleteQuickExpense(quick) }
                     }
                 }
