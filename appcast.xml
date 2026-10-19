@@ -6,6 +6,15 @@
     <link>https://github.com/Fantinl/Budget</link>
     <language>fr</language>
     <item>
+      <title>Budget 0.4.0</title>
+      <pubDate>Tue, 20 Oct 2026 00:04:34 +0200</pubDate>
+      <sparkle:version>5</sparkle:version>
+      <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>Import des relevés bancaires au format Excel (.xlsx)</p>]]></description>
+      <enclosure url="https://github.com/Fantinl/Budget/releases/download/v0.4.0/Budget.zip" type="application/octet-stream" sparkle:edSignature="4r6gy0oPS9iKUcAuwC+ZhxjoPDU1cZgkxG8sG/SQtzf47Fbtn4Yx4efLoKHUq80ypm8nyoqDWVYmGWK7GjIyCA==" length="6065989" />
+    </item>
+    <item>
       <title>Budget 0.3.0</title>
       <pubDate>Sat, 17 Oct 2026 12:25:08 +0200</pubDate>
       <sparkle:version>4</sparkle:version>
