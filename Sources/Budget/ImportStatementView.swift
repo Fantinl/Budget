@@ -14,6 +14,8 @@ struct ImportStatementView: View {
         var categoryID: String
         var isSelected: Bool
         var isDuplicate: Bool
+        /// Compte Izly de destination si la ligne est une recharge (virement), nil sinon.
+        var izlyAccountID: String?
     }
 
     @State private var showImporter = false
@@ -34,6 +36,10 @@ struct ImportStatementView: View {
 
     private var activeAccounts: [Account] { store.accounts.filter { !$0.isArchived } }
     private var duplicateCount: Int { items.filter(\.isDuplicate).count }
+    private var izlyAccounts: [Account] {
+        store.accounts.filter { $0.kind == .izly && !$0.isArchived && $0.id != accountID }
+    }
+    private var rechargeCount: Int { items.filter { $0.izlyAccountID != nil }.count }
     private var selectedCount: Int { items.filter(\.isSelected).count }
 
     var body: some View {
@@ -143,7 +149,9 @@ struct ImportStatementView: View {
     }
 
     private var summary: String {
-        var parts = ["\(items.count) opération\(items.count > 1 ? "s" : "")"]
+        var count = "\(items.count) opération\(items.count > 1 ? "s" : "")"
+        if rechargeCount > 0 { count += " dont \(rechargeCount) recharge\(rechargeCount > 1 ? "s" : "") Izly" }
+        var parts = [count]
         if duplicateCount > 0 { parts.append("\(duplicateCount) déjà présente\(duplicateCount > 1 ? "s" : "")") }
         if skipped > 0 { parts.append("\(skipped) ligne\(skipped > 1 ? "s" : "") ignorée\(skipped > 1 ? "s" : "")") }
         return parts.joined(separator: ", ")
@@ -245,13 +253,28 @@ struct ImportStatementView: View {
             Spacer(minLength: theme.spacing)
 
             Menu {
-                Picker("Catégorie", selection: item.categoryID) {
-                    ForEach(store.categories(for: kind)) { category in
-                        Label(category.label, systemImage: category.icon).tag(category.id)
+                if kind == .expense && !izlyAccounts.isEmpty {
+                    Button("Dépense normale") { item.wrappedValue.izlyAccountID = nil }
+                    ForEach(izlyAccounts) { izly in
+                        Button(izlyAccounts.count > 1 ? "Recharge Izly : \(izly.name)" : "Recharge Izly") {
+                            item.wrappedValue.izlyAccountID = izly.id
+                        }
+                    }
+                    Divider()
+                }
+                if value.izlyAccountID == nil {
+                    Picker("Catégorie", selection: item.categoryID) {
+                        ForEach(store.categories(for: kind)) { category in
+                            Label(category.label, systemImage: category.icon).tag(category.id)
+                        }
                     }
                 }
             } label: {
-                CategoryBadge(category: store.category(id: value.categoryID), size: theme.iconSize * 0.8)
+                if let izlyID = value.izlyAccountID {
+                    rechargeBadge(store.account(id: izlyID))
+                } else {
+                    CategoryBadge(category: store.category(id: value.categoryID), size: theme.iconSize * 0.8)
+                }
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
@@ -265,6 +288,18 @@ struct ImportStatementView: View {
         .padding(.horizontal, theme.padding)
         .padding(.vertical, theme.spacing)
         .opacity(value.isSelected ? 1 : 0.55)
+    }
+
+    private func rechargeBadge(_ account: Account?) -> some View {
+        HStack(spacing: theme.spacing / 2) {
+            Image(systemName: "arrow.left.arrow.right")
+            Text("→ \(account?.name ?? "Izly")")
+        }
+        .font(theme.captionFont)
+        .foregroundStyle(theme.accent)
+        .padding(.horizontal, theme.spacing)
+        .padding(.vertical, theme.spacing / 2)
+        .background(theme.surfaceSecondary, in: RoundedRectangle(cornerRadius: theme.smallCornerRadius))
     }
 
     // MARK: Logique
@@ -315,9 +350,11 @@ struct ImportStatementView: View {
         var index = store.duplicateIndex()
         return rows.map { row in
             let duplicate = consumeDuplicate(row, &index)
+            let recharge = row.kind == .expense && ImportRecharge.matches(label: row.label)
             return Item(row: row,
                         categoryID: categorizer.suggest(label: row.label, kind: row.kind),
-                        isSelected: !duplicate, isDuplicate: duplicate)
+                        isSelected: !duplicate, isDuplicate: duplicate,
+                        izlyAccountID: recharge ? izlyAccounts.first?.id : nil)
         }
     }
 
@@ -327,6 +364,8 @@ struct ImportStatementView: View {
             let duplicate = consumeDuplicate(items[i].row, &index)
             items[i].isDuplicate = duplicate
             items[i].isSelected = !duplicate
+            // Le compte Izly ne peut pas être le compte importé.
+            if let izly = items[i].izlyAccountID, izly == accountID { items[i].izlyAccountID = izlyAccounts.first?.id }
         }
     }
 
@@ -342,11 +381,15 @@ struct ImportStatementView: View {
 
     private func runImport() {
         let target: String? = accountID == Account.mainID ? nil : accountID
-        let imported = items.filter(\.isSelected).map { item in
+        let selected = items.filter(\.isSelected)
+        let imported = selected.filter { $0.izlyAccountID == nil }.map { item in
             Transaction(amount: item.row.amount, kind: item.row.kind, categoryID: item.categoryID,
                         note: item.row.label, date: item.row.date, accountID: target)
         }
-        store.addImported(imported)
+        let recharges = selected.compactMap { item in
+            item.izlyAccountID.map { ImportRecharge(amount: item.row.amount, date: item.row.date, note: item.row.label, izlyAccountID: $0) }
+        }
+        store.addImported(imported, recharges: recharges, from: accountID)
         dismiss()
     }
 }

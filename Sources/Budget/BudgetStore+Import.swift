@@ -3,9 +3,26 @@ import Foundation
 extension BudgetStore {
     /// Ajoute les opérations importées en une seule fois (une seule sauvegarde).
     func addImported(_ imported: [Transaction]) {
+        addImported(imported, recharges: [], from: Account.mainID)
+    }
+
+    /// Variante avec recharges Izly : chacune devient un virement `account` -> compte Izly,
+    /// le tout dans la même opération annulable et la même sauvegarde.
+    func addImported(_ imported: [Transaction], recharges: [ImportRecharge], from account: String) {
         registerUndo("Importer le relevé")
-        guard !imported.isEmpty else { return }
+        guard !imported.isEmpty || !recharges.isEmpty else { return }
         transactions.append(contentsOf: imported)
+        for recharge in recharges where recharge.izlyAccountID != account && recharge.amount > 0 {
+            let id = UUID()
+            let note = recharge.note.trimmingCharacters(in: .whitespacesAndNewlines)
+            let text = note.isEmpty ? Self.defaultTransferNote : note
+            transactions.append(Transaction(amount: recharge.amount, kind: .expense, categoryID: Self.transferCategoryID,
+                                            note: text, date: recharge.date, accountID: Self.storedAccountID(account),
+                                            recurringID: nil, transferID: id))
+            transactions.append(Transaction(amount: recharge.amount, kind: .income, categoryID: Self.transferCategoryID,
+                                            note: text, date: recharge.date, accountID: Self.storedAccountID(recharge.izlyAccountID),
+                                            recurringID: nil, transferID: id))
+        }
         saveTransactions()
     }
 

@@ -7,7 +7,7 @@ struct OnboardingView: View {
     @Environment(\.theme) private var theme
     var onFinish: () -> Void
 
-    private enum Step: Int, CaseIterable { case welcome, account, recurring, quick, done }
+    private enum Step: Int, CaseIterable { case welcome, student, account, recurring, quick, done }
 
     @State private var step = Step.welcome
     @State private var goingForward = true
@@ -17,11 +17,15 @@ struct OnboardingView: View {
     @State private var quick: [OnboardingQuickItem] = []
     @State private var newAccountDraft: AccountDraft?
     @State private var pendingDelete: Account?
+    @State private var isStudent = false
+    @State private var izlyOn = true
+    @State private var izlyBalance = ""
+    @State private var izlyID = UUID().uuidString
 
     private var isOptional: Bool { step == .recurring || step == .quick }
     private var canContinue: Bool {
         switch step {
-        case .account: draft.validated() != nil
+        case .account: draft.validated() != nil && (!izlyEnabled || izlyBalanceValid)
         case .recurring: recurring.allSatisfy { !$0.selected || $0.isValid }
         case .quick: quick.allSatisfy(\.isValid)
         default: true
@@ -125,6 +129,7 @@ struct OnboardingView: View {
     private var content: some View {
         switch step {
         case .welcome: welcome
+        case .student: OnboardingStudentStep(isStudent: $isStudent)
         case .account: accountStep
         case .recurring: OnboardingRecurringStep(items: $recurring)
         case .quick: OnboardingQuickStep(items: $quick)
@@ -135,6 +140,7 @@ struct OnboardingView: View {
     private func go(_ delta: Int) {
         guard let next = Step(rawValue: step.rawValue + delta) else { return }
         goingForward = delta > 0
+        if step == .student { syncCrous() }
         withAnimation(.smooth(duration: 0.35)) { step = next }
     }
 
@@ -185,17 +191,37 @@ struct OnboardingView: View {
                                  subtitle: "Le compte utilisé par défaut pour tes opérations.")
             preview
             Card { typeSection }
-            if kind != .cash { Card { bankSection } }
+            if !kind.hidesBank { Card { bankSection } }
             Card { nameSection }
             Card { balanceSection }
             otherAccountsSection
+            if isStudent && existingIzly == nil {
+                OnboardingIzlyCard(isOn: $izlyOn, balanceText: $izlyBalance)
+            }
+        }
+    }
+
+    // MARK: Profil étudiant
+
+    private var existingIzly: Account? { store.accounts.first { $0.kind == .izly } }
+    private var izlyEnabled: Bool { isStudent && izlyOn && existingIzly == nil }
+    private var izlyBalanceValid: Bool { AccountDraft.isBlank(izlyBalance) || AccountDraft.parse(izlyBalance) != nil }
+
+    /// Ajoute ou retire la suggestion « Repas Crous » selon la réponse.
+    private func syncCrous() {
+        if isStudent {
+            guard !quick.contains(where: \.isCrous) else { return }
+            let known = store.categories.contains { $0.id == "restaurants" && !$0.isHidden && $0.kind == .expense }
+            quick.insert(.crous(categoryID: known ? "restaurants" : "otherExpense"), at: 0)
+        } else {
+            quick.removeAll { $0.isCrous }
         }
     }
 
     private var preview: some View {
         let color = theme.color(for: draft.account)
         let name = draft.account.name.trimmingCharacters(in: .whitespaces)
-        let subtitle = [draft.trimmedBank.isEmpty || kind == .cash ? nil : draft.trimmedBank, kind.label]
+        let subtitle = [draft.trimmedBank.isEmpty || kind.hidesBank ? nil : draft.trimmedBank, kind.label]
             .compactMap { $0 }.joined(separator: " · ")
         return HStack(spacing: theme.padding) {
             AccountBadge(account: draft.account, size: 52)
@@ -244,7 +270,7 @@ struct OnboardingView: View {
             }
             Divider().overlay(theme.separator)
             EditorFlowLayout(spacing: theme.spacing) {
-                ForEach(AccountKind.kinds(in: kind.family)) { option in
+                ForEach(AccountKind.selectableKinds(in: kind.family, studentEnabled: false, current: kind)) { option in
                     OnboardingChip(title: option.label, icon: option.icon, selected: kind == option) { setKind(option) }
                 }
             }
@@ -344,7 +370,14 @@ struct OnboardingView: View {
     // MARK: 5 · Récapitulatif
 
     private var selectedRecurring: [OnboardingRecurringItem] { recurring.filter { $0.selected && $0.isValid } }
-    private var selectedQuick: [QuickExpense] { quick.compactMap { $0.quickExpense(store: store) } }
+    private var selectedQuick: [QuickExpense] {
+        let izlyID = izlyEnabled ? self.izlyID : existingIzly?.id
+        return quick.compactMap { item in
+            var item = item
+            if item.isCrous { item.accountID = izlyID }
+            return item.quickExpense(store: store)
+        }
+    }
 
     private var summary: some View {
         VStack(alignment: .leading, spacing: theme.padding) {
@@ -352,7 +385,7 @@ struct OnboardingView: View {
             Card {
                 VStack(alignment: .leading, spacing: theme.padding) {
                     summaryRow("star.fill", "Compte par défaut", draft.account.name)
-                    summaryRow("building.columns.fill", "Autres comptes", onboardingCount(otherAccounts.count, "compte", "comptes"))
+                    summaryRow("building.columns.fill", "Autres comptes", onboardingCount(otherAccounts.count + (izlyEnabled ? 1 : 0), "compte", "comptes"))
                     summaryRow("repeat", "Opérations récurrentes", onboardingCount(selectedRecurring.count, "récurrente", "récurrentes"))
                     summaryRow("bolt.fill", "Ajouts rapides", onboardingCount(selectedQuick.count, "ajout rapide", "ajouts rapides"))
                 }
@@ -378,6 +411,13 @@ struct OnboardingView: View {
     private func finish() {
         guard let main = draft.validated() else { return }
         store.upsertAccount(main)
+        if isStudent {
+            UserDefaults.standard.set(true, forKey: StudentProfile.enabledKey)
+            if izlyEnabled {
+                store.upsertAccount(.makeIzly(id: izlyID, balance: AccountDraft.parse(izlyBalance) ?? 0,
+                                              existing: store.accounts, paletteCount: theme.categoryPalette.count))
+            }
+        }
         for item in selectedRecurring {
             guard let amount = item.amount, let day = item.day else { continue }
             let known = store.categories.contains { $0.id == item.categoryID && !$0.isHidden && $0.kind == item.kind }

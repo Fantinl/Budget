@@ -108,7 +108,7 @@ struct AccountDraft: Identifiable {
     /// Nom proposé : « Livret A », « Compte courant Boursorama », « PEA Trade Republic ».
     var suggestedName: String {
         let base = account.kind.label
-        return trimmedBank.isEmpty || account.kind == .cash ? base : "\(base) \(trimmedBank)"
+        return trimmedBank.isEmpty || account.kind.hidesBank ? base : "\(base) \(trimmedBank)"
     }
 
     /// Recalcule le nom s'il est encore automatique.
@@ -126,7 +126,7 @@ struct AccountDraft: Identifiable {
         var result = account
         result.name = name
         result.initialBalance = balance
-        result.bank = (trimmedBank.isEmpty || account.kind == .cash) ? nil : trimmedBank
+        result.bank = (trimmedBank.isEmpty || account.kind.hidesBank) ? nil : trimmedBank
         if !account.kind.hasRegulatedRate { result.autoRate = nil }
         if account.kind != .pel { result.openingDate = nil }
         if showsRate && !autoRateActive && !Self.isBlank(rateText) {
@@ -192,6 +192,7 @@ struct AccountEditorSheet: View {
         "Trade Republic",
     ]
 
+    @AppStorage(StudentProfile.enabledKey) private var isStudent = false
     private var isMain: Bool { draft.account.id == Account.mainID }
     private var kind: AccountKind { draft.account.kind }
     private var canSave: Bool { draft.validated() != nil }
@@ -206,7 +207,7 @@ struct AccountEditorSheet: View {
                 VStack(spacing: theme.padding) {
                     preview
                     Card { typeSection }
-                    if kind != .cash { Card { bankSection } }
+                    if !kind.hidesBank { Card { bankSection } }
                     Card { nameSection }
                     Card { amountsSection }
                     Card { colorSection }
@@ -244,7 +245,7 @@ struct AccountEditorSheet: View {
     private var preview: some View {
         let color = theme.color(for: draft.account)
         let name = draft.account.name.trimmingCharacters(in: .whitespaces)
-        let subtitle = [draft.trimmedBank.isEmpty || kind == .cash ? nil : draft.trimmedBank, kind.label]
+        let subtitle = [draft.trimmedBank.isEmpty || kind.hidesBank ? nil : draft.trimmedBank, kind.label]
             .compactMap { $0 }.joined(separator: " · ")
         return HStack(spacing: theme.padding) {
             AccountBadge(account: draft.account, size: 52)
@@ -315,7 +316,7 @@ struct AccountEditorSheet: View {
             }
             Divider().overlay(theme.separator)
             EditorFlowLayout(spacing: theme.spacing) {
-                ForEach(AccountKind.kinds(in: kind.family)) { option in
+                ForEach(AccountKind.selectableKinds(in: kind.family, studentEnabled: isStudent, current: kind)) { option in
                     chip(option.label, icon: option.icon, selected: kind == option) { setKind(option) }
                 }
             }

@@ -49,6 +49,7 @@ struct SettingsView: View {
                         .font(theme.captionFont)
                         .foregroundStyle(theme.textSecondary)
                 }
+                StudentProfileSection()
                 SettingsAppearanceSection()
                 #if os(macOS)
                 SettingsMenuBarSection()

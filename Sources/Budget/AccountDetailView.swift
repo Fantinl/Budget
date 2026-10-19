@@ -10,6 +10,7 @@ struct AccountDetailView: View {
     @State private var draft: Draft?
     @State private var search = ""
     @State private var showTransfer = false
+    @State private var showAdjust = false
 
     private var account: Account { store.account(id: accountID) }
 
@@ -75,12 +76,20 @@ struct AccountDetailView: View {
         .sheet(item: $editing) { AccountEditorSheet(draft: $0) }
         .sheet(item: $draft) { OperationEditor(draft: $0) }
         .sheet(isPresented: $showTransfer) { TransferEditorView(fromAccountID: accountID) }
+        .sheet(isPresented: $showAdjust) { AdjustBalanceSheet(accountID: accountID) }
     }
 
     private var header: some View {
         VStack(alignment: .trailing, spacing: theme.spacing) {
             AccountCardContent(account: account, large: true)
+            if account.kind == .izly {
+                Text("Recopie le solde affiché dans l'app Izly pour enregistrer les repas non notés.")
+                    .font(theme.captionFont)
+                    .foregroundStyle(theme.textTertiary)
+                    .multilineTextAlignment(.trailing)
+            }
             HStack(spacing: theme.spacing) {
+                adjustButton
                 Button("Virement", systemImage: "arrow.left.arrow.right") { showTransfer = true }
                     .disabled(store.activeAccounts.count < 2 || account.isArchived)
                 Button("Modifier", systemImage: "pencil") { editing = AccountDraft(account: account) }
@@ -89,6 +98,17 @@ struct AccountDetailView: View {
             .tint(theme.color(for: account))
         }
         .accountCardBackground(account)
+    }
+
+    /// Mis en avant pour les comptes qu'on ne tient pas à la dépense près.
+    @ViewBuilder private var adjustButton: some View {
+        let button = Button("Ajuster le solde", systemImage: "equal.circle") { showAdjust = true }
+            .disabled(account.isArchived)
+        if [.izly, .cash, .card].contains(account.kind) {
+            button.buttonStyle(.borderedProminent)
+        } else {
+            button
+        }
     }
 
     private var monthSummary: some View {

@@ -126,6 +126,8 @@ enum AccountKind: String, Codable, CaseIterable, Identifiable {
     case pea, peaPme, compteTitres, per, crypto
     // Autres
     case cash, card
+    /// Porte-monnaie Izly (Crous) : repas et cafétérias universitaires. Proposé seulement avec le profil étudiant.
+    case izly
 
     var id: Self { self }
 
@@ -134,7 +136,7 @@ enum AccountKind: String, Codable, CaseIterable, Identifiable {
         case .checking: .current
         case .livretA, .ldds, .lep, .livretJeune, .pel, .cel, .savings, .assuranceVie: .savings
         case .pea, .peaPme, .compteTitres, .per, .crypto: .investment
-        case .cash, .card: .other
+        case .cash, .card, .izly: .other
         }
     }
 
@@ -156,6 +158,7 @@ enum AccountKind: String, Codable, CaseIterable, Identifiable {
         case .crypto: "Crypto"
         case .cash: "Espèces"
         case .card: "Carte prépayée"
+        case .izly: "Izly"
         }
     }
 
@@ -170,6 +173,7 @@ enum AccountKind: String, Codable, CaseIterable, Identifiable {
         case .crypto: "bitcoinsign.circle.fill"
         case .cash: "dollarsign.circle.fill"
         case .card: "creditcard.fill"
+        case .izly: "fork.knife.circle.fill"
         }
     }
 
@@ -333,4 +337,16 @@ extension Date {
     func addingMonths(_ n: Int) -> Date {
         Calendar.current.date(byAdding: .month, value: n, to: self) ?? self
     }
+}
+
+// MARK: - Profil étudiant
+
+/// Préférences du profil étudiant (désactivé par défaut) : active le compte Izly et les repas Crous.
+enum StudentProfile {
+    /// Clé `@AppStorage` : l'utilisateur est étudiant.
+    static let enabledKey = "studentProfile"
+    /// Prix d'un repas au restaurant universitaire (1 € pour tous depuis le 4 mai 2026).
+    static let defaultMealPrice: Decimal = 1
+    /// Mots repérant une recharge Izly dans un libellé de relevé bancaire.
+    static let rechargeKeywords = ["IZLY"]
 }

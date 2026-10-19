@@ -14,7 +14,7 @@ struct StatementCategorizer {
 
     /// Mots-clés par catégorie, dans l'ordre de priorité (« uber eats » avant « uber »).
     private static let keywords: [(id: String, kind: TransactionKind, words: [String])] = [
-        ("restaurants", .expense, ["restaurant", "resto", "mcdo", "mcdonald", "burger king", "kfc", "deliveroo", "uber eats", "just eat", "brasserie", "pizza", "sushi", "starbucks", "boulangerie"]),
+        ("restaurants", .expense, ["restaurant", "resto", "mcdo", "mcdonald", "burger king", "kfc", "deliveroo", "uber eats", "just eat", "brasserie", "pizza", "sushi", "starbucks", "boulangerie", "izly", "crous"]),
         ("groceries", .expense, ["carrefour", "leclerc", "auchan", "lidl", "monoprix", "intermarche", "franprix", "casino", "picard", "aldi", "supermarche", "biocoop", "grand frais"]),
         ("transport", .expense, ["sncf", "ratp", "navigo", "total", "totalenergies", "esso", "uber", "peage", "bp", "blablacar", "vinci autoroutes", "sanef", "autoroute", "parking", "ouigo", "tisseo"]),
         ("housing", .expense, ["loyer", "syndic", "edf", "engie", "foncia"]),

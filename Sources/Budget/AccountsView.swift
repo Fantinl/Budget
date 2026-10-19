@@ -9,6 +9,7 @@ struct AccountsView: View {
     @State private var pendingDelete: Account?
     @State private var showArchived = false
     @State private var transfer: TransferRequest?
+    @State private var adjusting: Account?
 
     /// Demande d'ouverture de l'éditeur de virement (compte source facultatif).
     private struct TransferRequest: Identifiable {
@@ -81,6 +82,7 @@ struct AccountsView: View {
                 AccountEditorSheet(draft: draft)
             }
             .sheet(item: $transfer) { TransferEditorView(fromAccountID: $0.fromAccountID) }
+            .sheet(item: $adjusting) { AdjustBalanceSheet(accountID: $0.id) }
             .accountDeletionDialog(item: $pendingDelete)
         }
     }
@@ -181,6 +183,9 @@ struct AccountsView: View {
         .buttonStyle(.plain)
         .contextMenu {
             Button("Modifier…", systemImage: "pencil") { editing = AccountDraft(account: account) }
+            if !account.isArchived {
+                Button("Ajuster le solde…", systemImage: "equal.circle") { adjusting = account }
+            }
             if !account.isArchived && store.activeAccounts.count > 1 {
                 Button("Virement depuis ce compte…", systemImage: "arrow.left.arrow.right") {
                     transfer = TransferRequest(fromAccountID: account.id)

@@ -9,6 +9,9 @@ struct OnboardingQuickItem: Identifiable {
     var categoryID: String
     var amountText: String
     var selected: Bool
+    /// Suggestion « Repas Crous » (débitée sur le compte Izly).
+    var isCrous = false
+    var accountID: String?
 
     init(name: String, categoryID: String, amount: Decimal) {
         self.name = name
@@ -23,6 +26,14 @@ struct OnboardingQuickItem: Identifiable {
         categoryID = existing.categoryID
         amountText = OnboardingFormat.text(existing.amount)
         selected = true
+    }
+
+    /// Repas Crous à 1 €, coché par défaut.
+    static func crous(categoryID: String) -> OnboardingQuickItem {
+        var item = OnboardingQuickItem(name: "Repas Crous", categoryID: categoryID, amount: StudentProfile.defaultMealPrice)
+        item.isCrous = true
+        item.selected = true
+        return item
     }
 
     static let suggestions: [OnboardingQuickItem] = [
@@ -46,7 +57,8 @@ struct OnboardingQuickItem: Identifiable {
         }
         let known = store.categories.contains { $0.id == categoryID && !$0.isHidden && $0.kind == .expense }
         return QuickExpense(name: name, amount: amount,
-                            categoryID: known ? categoryID : store.fallbackCategory(for: .expense).id)
+                            categoryID: known ? categoryID : store.fallbackCategory(for: .expense).id,
+                            accountID: accountID)
     }
 }
 
