@@ -18,6 +18,11 @@ let package = Package(
             path: "Sources/Budget",
             // Sparkle.framework est copié dans Budget.app/Contents/Frameworks par build-app.sh
             linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
-        )
+        ),
+        .testTarget(
+            name: "BudgetTests",
+            dependencies: ["Budget"],
+            path: "Tests/BudgetTests"
+        ),
     ]
 )

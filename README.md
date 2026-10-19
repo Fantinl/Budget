@@ -2,6 +2,8 @@
 
 # Budget
 
+![Tests](https://github.com/Fantinl/Budget/actions/workflows/tests.yml/badge.svg)
+
 Une app Mac simple pour suivre ses dépenses, ses revenus et ses comptes.
 
 - Ajout d'une dépense en quelques secondes : ajouts rapides en un clic, ou saisie express (« essence 60 hier »)
@@ -92,6 +94,15 @@ cd Budget
 ./build-app.sh --install   # et la copie dans /Applications
 ./build-app.sh --zip       # et crée build/Budget.zip (pour une release)
 ```
+
+Lancer les tests (XCTest, `Tests/BudgetTests/`) :
+
+```bash
+swift test                          # toute la suite
+swift test --filter RecurringTests  # une seule classe
+```
+
+Les tests utilisent des dossiers temporaires (jamais tes vraies données), n'ont pas besoin du réseau et sont aussi exécutés par GitHub Actions à chaque push et pull request (`.github/workflows/tests.yml`).
 
 Publier une nouvelle version pour les testeurs (compile, crée la release GitHub, signe la mise à jour et l'annonce dans `appcast.xml`) :
 
