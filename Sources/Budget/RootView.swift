@@ -19,7 +19,7 @@ struct RootView: View {
         let url: URL
     }
 
-    private static let statementExtensions: Set<String> = ["csv", "ofx", "qfx", "txt"]
+    private static let statementExtensions: Set<String> = ["csv", "ofx", "qfx", "txt", "xlsx", "xls"]
 
     var body: some View {
         // Barre latérale toujours visible (pas de bouton pour la replier).

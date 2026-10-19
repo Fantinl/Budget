@@ -1,6 +1,6 @@
 import Foundation
 
-// Lecture d'un relevé bancaire (CSV ou OFX). Logique pure, sans SwiftUI.
+// Lecture d'un relevé bancaire (CSV, Excel ou OFX). Logique pure, sans SwiftUI.
 
 /// Ligne lisible d'un relevé. Le montant est signé : négatif = dépense, positif = revenu.
 struct StatementRow: Hashable {
@@ -44,11 +44,17 @@ enum StatementContent {
 enum StatementError: LocalizedError {
     case unreadable
     case empty
+    case legacyExcel
+    case excelUnreadable
+    case excelUnsupported
 
     var errorDescription: String? {
         switch self {
         case .unreadable: "Impossible de lire ce fichier."
         case .empty: "Aucune opération trouvée dans ce fichier."
+        case .legacyExcel: "Ce fichier est au format Excel 97-2003 (.xls). Ouvre-le dans Numbers ou Excel et exporte-le en .xlsx ou .csv, puis importe ce fichier."
+        case .excelUnreadable: "Impossible de lire ce fichier Excel. Exporte-le en .csv depuis Numbers ou Excel, puis importe ce fichier."
+        case .excelUnsupported: "L'import de fichiers Excel n'est pas disponible sur cet appareil. Exporte le relevé en CSV."
         }
     }
 }
@@ -57,6 +63,15 @@ enum StatementParser {
     // MARK: Point d'entrée
 
     static func parse(data: Data) throws -> StatementContent {
+        // Le contenu décide du format, l'extension n'est qu'un indice.
+        if data.starts(with: [0x50, 0x4B, 0x03, 0x04]) {
+            let grid = try SpreadsheetReader.xlsxGrid(data: data)
+            guard var table = table(fromGrid: grid) else { throw StatementError.empty }
+            normalizeSerialDates(in: &table)
+            return .table(table)
+        }
+        if data.starts(with: [0xD0, 0xCF, 0x11, 0xE0]) { throw StatementError.legacyExcel }
+
         let text = decode(data)
         guard !text.isEmpty else { throw StatementError.unreadable }
         if text.range(of: "<STMTTRN>", options: .caseInsensitive) != nil {
@@ -64,8 +79,29 @@ enum StatementParser {
             guard !result.rows.isEmpty else { throw StatementError.empty }
             return .rows(result)
         }
+        if isHTMLTable(text) {
+            guard let table = table(fromGrid: SpreadsheetReader.htmlGrid(text)) else { throw StatementError.empty }
+            return .table(table)
+        }
         guard let table = parseCSV(text) else { throw StatementError.empty }
         return .table(table)
+    }
+
+    /// Faux .xls : un tableau HTML.
+    private static func isHTMLTable(_ text: String) -> Bool {
+        let head = text.prefix(4096).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return head.hasPrefix("<") && (head.contains("<table") || head.contains("<tr"))
+    }
+
+    /// Filet de sécurité : nombres de série Excel (20000 à 80000) dans la colonne de date -> jj/mm/aaaa.
+    private static func normalizeSerialDates(in table: inout StatementTable) {
+        guard let column = table.columns.date else { return }
+        for index in table.rows.indices where table.rows[index].indices.contains(column) {
+            let cell = table.rows[index][column]
+            if let serial = Double(cell), (20000...80000).contains(serial) {
+                table.rows[index][column] = SpreadsheetReader.dateText(fromSerial: serial)
+            }
+        }
     }
 
     // MARK: Encodage
@@ -84,25 +120,37 @@ enum StatementParser {
     // MARK: CSV
 
     static func parseCSV(_ text: String) -> StatementTable? {
-        var best: (table: StatementTable, delimiter: Character)?
+        var best: StatementTable?
         var fallback: (records: [[String]], score: Int)?
 
         for delimiter: Character in [";", "\t", ","] {
             let records = tokenize(text, delimiter: delimiter)
-            if let index = headerIndex(in: records) {
-                let headers = records[index]
-                let rows = records[(index + 1)...].filter { row in row.contains { !$0.isEmpty } }
-                let table = StatementTable(headers: headers, rows: Array(rows), columns: detectColumns(headers))
-                // Plus il y a de colonnes reconnues, mieux c'est ; à égalité, le premier séparateur gagne.
-                if best == nil { best = (table, delimiter) }
-            }
+            // À égalité, le premier séparateur gagne.
+            if best == nil, let table = headerTable(fromGrid: records) { best = table }
             let score = records.prefix(5).reduce(0) { $0 + $1.count }
             if fallback == nil || score > fallback!.score { fallback = (records, score) }
         }
-        if let best { return best.table }
+        if let best { return best }
+        return fallback.flatMap { fallbackTable(fromGrid: $0.records) }
+    }
 
-        // Aucun en-tête reconnu : première ligne = en-têtes, l'utilisateur choisira les colonnes.
-        guard let records = fallback?.records, let first = records.first, first.count > 1 else { return nil }
+    /// Grille -> tableau : en-têtes repérés, sinon première ligne en en-têtes.
+    static func table(fromGrid grid: [[String]]) -> StatementTable? {
+        let records = grid.filter { row in row.contains { !$0.isEmpty } }
+        return headerTable(fromGrid: records) ?? fallbackTable(fromGrid: records)
+    }
+
+    /// Tableau dont la ligne d'en-têtes (date + montant ou débit/crédit) a été reconnue.
+    private static func headerTable(fromGrid records: [[String]]) -> StatementTable? {
+        guard let index = headerIndex(in: records) else { return nil }
+        let headers = records[index]
+        let rows = records[(index + 1)...].filter { row in row.contains { !$0.isEmpty } }
+        return StatementTable(headers: headers, rows: Array(rows), columns: detectColumns(headers))
+    }
+
+    /// Aucun en-tête reconnu : première ligne = en-têtes, l'utilisateur choisira les colonnes.
+    private static func fallbackTable(fromGrid records: [[String]]) -> StatementTable? {
+        guard let first = records.first, first.count > 1 else { return nil }
         let rows = records.dropFirst().filter { row in row.contains { !$0.isEmpty } }
         return StatementTable(headers: first, rows: Array(rows), columns: StatementColumns())
     }

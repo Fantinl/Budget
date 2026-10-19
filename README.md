@@ -9,7 +9,7 @@ Une app Mac simple pour suivre ses dépenses, ses revenus et ses comptes.
 - Comptes courants, livrets (Livret A, LDDS…), PEA, assurance vie…, regroupés par type ou par banque, virements entre comptes
 - Opérations récurrentes (loyer, salaire, abonnements) créées automatiquement
 - Statistiques, prévision du solde de fin de mois
-- Import de relevés bancaires (CSV, OFX), export CSV, sauvegardes automatiques
+- Import de relevés bancaires (CSV, Excel, OFX), export CSV, sauvegardes automatiques
 - Icône facultative dans la barre des menus (désactivée par défaut) : solde, saisie express et ajouts rapides sans ouvrir l'app
 - Mode clair / sombre, deux styles visuels
 
@@ -65,7 +65,7 @@ La liste complète est dans **Aide ▸ Raccourcis clavier** (⌘/) ou dans les R
 | ↩ / ⌥↩ (saisie express) | Enregistrer / ouvrir le formulaire complet |
 
 Dans les champs montant, tu peux taper un calcul : `12,5+8` → 20,50 €.
-Pour importer un relevé, glisse le fichier CSV de ta banque sur la fenêtre.
+Pour importer un relevé, glisse le fichier (CSV, Excel ou OFX) de ta banque sur la fenêtre.
 
 ## Tes données
 

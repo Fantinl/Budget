@@ -1,7 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Importe un relevé bancaire (CSV ou OFX) : choix du fichier, aperçu corrigeable, import en une fois.
+/// Importe un relevé bancaire (CSV, Excel ou OFX) : choix du fichier, aperçu corrigeable, import en une fois.
 struct ImportStatementView: View {
     @Environment(BudgetStore.self) private var store
     @Environment(\.dismiss) private var dismiss
@@ -79,7 +79,7 @@ struct ImportStatementView: View {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: theme.iconSize, weight: .light))
                 .foregroundStyle(theme.textTertiary)
-            Text("Exporte le relevé en CSV depuis le site de ta banque, puis choisis le fichier ici.")
+            Text("Exporte ton relevé depuis le site de ta banque en CSV, Excel ou OFX, puis choisis le fichier ici.")
                 .font(theme.bodyFont)
                 .foregroundStyle(theme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -271,7 +271,7 @@ struct ImportStatementView: View {
 
     private static var contentTypes: [UTType] {
         [.commaSeparatedText, .tabSeparatedText, .plainText, .text]
-            + ["ofx", "qfx", "csv"].compactMap { UTType(filenameExtension: $0) }
+            + ["ofx", "qfx", "csv", "xlsx", "xls"].compactMap { UTType(filenameExtension: $0) }
     }
 
     private func load(_ result: Result<URL, Error>) {
