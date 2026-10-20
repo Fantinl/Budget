@@ -39,47 +39,55 @@ struct SettingsAppearanceSection: View {
             .pickerStyle(.segmented)
             .font(theme.bodyFont)
 
-            ForEach(Theme.all) { option in
-                Button {
-                    themeID = option.id
-                } label: {
-                    HStack(spacing: theme.spacing) {
-                        SettingsThemePreview(option: option)
-                        Text(option.name)
-                            .font(theme.bodyFont)
-                            .foregroundStyle(theme.textPrimary)
-                        Spacer()
-                        if option.id == Theme.named(themeID).id {
-                            Image(systemName: "checkmark")
-                                .foregroundStyle(theme.accent)
-                        }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
+                ForEach(Theme.all) { option in
+                    let selected = option.id == Theme.named(themeID).id
+                    Button {
+                        themeID = option.id
+                    } label: {
+                        SettingsThemePreview(option: option, selected: selected)
                     }
-                    .contentShape(.rect)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(option.name)
                 }
-                .buttonStyle(.plain)
             }
+            .padding(.vertical, 4)
         }
     }
 }
 
-/// Aperçu d'un thème : pastilles de sa palette et son accent sur son fond.
+/// Vignette d'un thème : nom, pastilles de sa palette et son accent, sur son fond.
 private struct SettingsThemePreview: View {
     let option: Theme
+    let selected: Bool
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(Array(option.categoryPalette.prefix(4).enumerated()), id: \.offset) { _, color in
-                Circle().fill(color).frame(width: 12, height: 12)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(option.name)
+                    .font(option.titleFont)
+                    .foregroundStyle(option.textPrimary)
+                Spacer(minLength: 0)
+                if selected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(option.accent)
+                }
             }
-            Capsule().fill(option.accent).frame(width: 18, height: 8)
+            HStack(spacing: 4) {
+                ForEach(Array(option.categoryPalette.prefix(4).enumerated()), id: \.offset) { _, color in
+                    Circle().fill(color).frame(width: 12, height: 12)
+                }
+                Capsule().fill(option.accent).frame(width: 18, height: 8)
+            }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(option.background, in: .rect(cornerRadius: option.smallCornerRadius))
         .overlay(
             RoundedRectangle(cornerRadius: option.smallCornerRadius)
-                .stroke(option.separator, lineWidth: 1)
+                .stroke(selected ? option.accent : option.separator, lineWidth: selected ? 2 : 1)
         )
+        .contentShape(.rect)
     }
 }
 

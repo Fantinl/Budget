@@ -27,7 +27,7 @@ struct RootView: View {
         // Barre latérale toujours visible (pas de bouton pour la replier).
         NavigationSplitView(columnVisibility: .constant(.all)) {
             SidebarView(selection: $selection)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 280)
+                .navigationSplitViewColumnWidth(min: 230, ideal: 260, max: 340)
                 .toolbar(removing: .sidebarToggle)
         } detail: {
             detail

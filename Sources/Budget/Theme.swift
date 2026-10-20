@@ -83,7 +83,7 @@ struct Theme: Identifiable {
 
 extension Theme {
     /// Thèmes proposés dans les réglages.
-    static let all: [Theme] = [.minimal, .vivid]
+    static let all: [Theme] = [.minimal, .vivid, .ocean, .forest, .sand, .contrast]
 
     /// Thème par défaut.
     static let current: Theme = .minimal
@@ -206,6 +206,252 @@ extension Theme {
         heroShadowColor: Color(light: Color(hex: 0x6C47FF).opacity(0.35), dark: Color.black.opacity(0.45)),
         heroShadowRadius: 20,
         heroTintsBalance: false
+    )
+    // MARK: Palettes de catégories (séparées pour alléger la compilation)
+
+    private static let oceanPalette: [Color] = [
+        Color(hex: 0x2DB87A), Color(hex: 0x7A6A5A), Color(hex: 0x2F80ED), Color(hex: 0xF29B38),
+        Color(hex: 0x8E6CF0), Color(hex: 0xE5586B), Color(hex: 0xE87BB0), Color(hex: 0x4558D6),
+        Color(hex: 0x8A9BA8), Color(hex: 0x14A89A), Color(hex: 0x2BB3E6), Color(hex: 0x6FD0C5),
+    ]
+    private static let forestPalette: [Color] = [
+        Color(hex: 0x5FA86A), Color(hex: 0xA0825A), Color(hex: 0x4A86B5), Color(hex: 0xE09A3E),
+        Color(hex: 0x8C6BB5), Color(hex: 0xCB5A4C), Color(hex: 0xD9799B), Color(hex: 0x5D6FBF),
+        Color(hex: 0x8E9A8A), Color(hex: 0x2F9E7E), Color(hex: 0x5BAFC4), Color(hex: 0xA6B84A),
+    ]
+    private static let sandPalette: [Color] = [
+        Color(hex: 0x7E9A5B), Color(hex: 0xA67C52), Color(hex: 0x4F7FA8), Color(hex: 0xE0933C),
+        Color(hex: 0x8A6BA8), Color(hex: 0xC8553D), Color(hex: 0xD97B9A), Color(hex: 0x5E6BB0),
+        Color(hex: 0x9A8F82), Color(hex: 0x3E9A87), Color(hex: 0x5AA7C2), Color(hex: 0xB8B34A),
+    ]
+    private static let contrastPalette: [Color] = [
+        Color(hex: 0x00A651), Color(hex: 0x8B5A2B), Color(hex: 0x0057E7), Color(hex: 0xFF8000),
+        Color(hex: 0x8000FF), Color(hex: 0xE60026), Color(hex: 0xFF3399), Color(hex: 0x2B2BCC),
+        Color(hex: 0x707070), Color(hex: 0x00A89D), Color(hex: 0x00AEEF), Color(hex: 0x99CC00),
+    ]
+
+    /// Style 3 — Océan : bleus et turquoises, fond bleuté, héros en dégradé bleu → turquoise.
+    static let ocean = Theme(
+        id: "ocean",
+        name: "Océan",
+
+        background: Color(light: Color(hex: 0xEEF6FA), dark: Color(hex: 0x0A1620)),
+        surface: Color(light: .white, dark: Color(hex: 0x12212E)),
+        surfaceSecondary: Color(light: Color(hex: 0xE1EEF5), dark: Color(hex: 0x1B3042)),
+        separator: Color(light: Color(hex: 0xD3E4EE), dark: Color(hex: 0x244058)),
+
+        textPrimary: Color(light: Color(hex: 0x0C2230), dark: Color(hex: 0xEAF5FA)),
+        textSecondary: Color(light: Color(hex: 0x4B6678), dark: Color(hex: 0x9DB8C8)),
+        textTertiary: Color(light: Color(hex: 0x82A0B2), dark: Color(hex: 0x5F7E91)),
+
+        accent: Color(light: Color(hex: 0x0A7F8C), dark: Color(hex: 0x2CC4CF)),
+        positive: Color(light: Color(hex: 0x0F9D6B), dark: Color(hex: 0x34D399)),
+        negative: Color(light: Color(hex: 0xE04F5F), dark: Color(hex: 0xFF7385)),
+
+        categoryPalette: oceanPalette,
+        categoryFallback: Color(hex: 0x8A9BA8),
+
+        fontDesign: .rounded,
+        largeAmountFont: .system(size: 36, weight: .semibold, design: .rounded),
+        amountFont: .system(.body, design: .rounded).weight(.semibold),
+        titleFont: .system(.headline, design: .rounded),
+        bodyFont: .system(.body, design: .rounded),
+        captionFont: .system(.caption, design: .rounded),
+
+        cornerRadius: 18,
+        smallCornerRadius: 10,
+        spacing: 12,
+        padding: 16,
+        iconSize: 36,
+
+        backgroundTop: Color(light: Color(hex: 0xE8F4FA), dark: Color(hex: 0x0C1C2A)),
+        backgroundBottom: Color(light: Color(hex: 0xF2FAF9), dark: Color(hex: 0x08131B)),
+
+        cardShadowColor: Color(light: Color(hex: 0x0A5A7A).opacity(0.10), dark: Color.black.opacity(0.35)),
+        cardShadowRadius: 10,
+        cardShadowY: 4,
+        cardBorder: Color(light: Color.white.opacity(0.9), dark: Color.white.opacity(0.05)),
+        cardBorderWidth: 1,
+
+        badgeFillOpacity: 0.18,
+
+        heroGradientStart: Color(light: Color(hex: 0x1C6FD1), dark: Color(hex: 0x15509E)),
+        heroGradientEnd: Color(light: Color(hex: 0x0E9A9A), dark: Color(hex: 0x0C7F85)),
+        heroTextPrimary: .white,
+        heroTextSecondary: Color.white.opacity(0.82),
+        heroShadowColor: Color(light: Color(hex: 0x1C6FD1).opacity(0.30), dark: Color.black.opacity(0.45)),
+        heroShadowRadius: 18,
+        heroTintsBalance: false,
+        onAccent: Color(light: .white, dark: Color(hex: 0x06222B)),
+        warning: Color(hex: 0xE8A33D)
+    )
+
+    /// Style 4 — Forêt : verts sauge et mousse, bois clair, accent vert sapin.
+    static let forest = Theme(
+        id: "forest",
+        name: "Forêt",
+
+        background: Color(light: Color(hex: 0xF1F3EC), dark: Color(hex: 0x10150F)),
+        surface: Color(light: Color(hex: 0xFAFBF6), dark: Color(hex: 0x1A211A)),
+        surfaceSecondary: Color(light: Color(hex: 0xE5E9DC), dark: Color(hex: 0x252E24)),
+        separator: Color(light: Color(hex: 0xD8DECD), dark: Color(hex: 0x303B2E)),
+
+        textPrimary: Color(light: Color(hex: 0x1B2A1C), dark: Color(hex: 0xEDF2E6)),
+        textSecondary: Color(light: Color(hex: 0x566652), dark: Color(hex: 0xA3B39D)),
+        textTertiary: Color(light: Color(hex: 0x8A9885), dark: Color(hex: 0x68775F)),
+
+        accent: Color(light: Color(hex: 0x2E6B4A), dark: Color(hex: 0x6FBF8E)),
+        positive: Color(light: Color(hex: 0x2E8B57), dark: Color(hex: 0x5BCB8A)),
+        negative: Color(light: Color(hex: 0xC8483E), dark: Color(hex: 0xF07A6E)),
+
+        categoryPalette: forestPalette,
+        categoryFallback: Color(hex: 0x8E9A8A),
+
+        fontDesign: .rounded,
+        largeAmountFont: .system(size: 34, weight: .semibold, design: .rounded),
+        amountFont: .system(.body, design: .rounded).weight(.medium),
+        titleFont: .system(.headline, design: .rounded),
+        bodyFont: .system(.body, design: .rounded),
+        captionFont: .system(.caption, design: .rounded),
+
+        cornerRadius: 16,
+        smallCornerRadius: 9,
+        spacing: 12,
+        padding: 16,
+        iconSize: 34,
+
+        backgroundTop: Color(light: Color(hex: 0xF1F3EC), dark: Color(hex: 0x10150F)),
+        backgroundBottom: Color(light: Color(hex: 0xE9EEE2), dark: Color(hex: 0x0C100B)),
+
+        cardShadowColor: Color(light: Color(hex: 0x2E4A33).opacity(0.08), dark: Color.black.opacity(0.30)),
+        cardShadowRadius: 8,
+        cardShadowY: 3,
+        cardBorder: Color(light: Color(hex: 0xD8DECD).opacity(0.7), dark: Color.white.opacity(0.04)),
+        cardBorderWidth: 1,
+
+        badgeFillOpacity: 0.18,
+
+        heroGradientStart: Color(light: Color(hex: 0x1F4D36), dark: Color(hex: 0x17402D)),
+        heroGradientEnd: Color(light: Color(hex: 0x3C7A55), dark: Color(hex: 0x2F6446)),
+        heroTextPrimary: .white,
+        heroTextSecondary: Color.white.opacity(0.80),
+        heroShadowColor: Color(light: Color(hex: 0x1F4D36).opacity(0.28), dark: Color.black.opacity(0.45)),
+        heroShadowRadius: 16,
+        heroTintsBalance: false,
+        onAccent: Color(light: .white, dark: Color(hex: 0x0E2417)),
+        warning: Color(hex: 0xD9962B)
+    )
+
+    /// Style 5 — Sable : terre, terracotta et crème, ambiance papier, titres et montants en serif.
+    static let sand = Theme(
+        id: "sand",
+        name: "Sable",
+
+        background: Color(light: Color(hex: 0xF6EFE4), dark: Color(hex: 0x1A1511)),
+        surface: Color(light: Color(hex: 0xFFFAF2), dark: Color(hex: 0x241D17)),
+        surfaceSecondary: Color(light: Color(hex: 0xEDE3D3), dark: Color(hex: 0x30271F)),
+        separator: Color(light: Color(hex: 0xE2D6C2), dark: Color(hex: 0x3D3228)),
+
+        textPrimary: Color(light: Color(hex: 0x2E2118), dark: Color(hex: 0xF4EBDD)),
+        textSecondary: Color(light: Color(hex: 0x6B5846), dark: Color(hex: 0xBBA98F)),
+        textTertiary: Color(light: Color(hex: 0x9C8A74), dark: Color(hex: 0x85755F)),
+
+        accent: Color(light: Color(hex: 0xB5522F), dark: Color(hex: 0xE2845E)),
+        positive: Color(light: Color(hex: 0x4F8A4B), dark: Color(hex: 0x8CC27F)),
+        negative: Color(light: Color(hex: 0xB83A3A), dark: Color(hex: 0xF08080)),
+
+        categoryPalette: sandPalette,
+        categoryFallback: Color(hex: 0x9A8F82),
+
+        fontDesign: .serif,
+        largeAmountFont: .system(size: 36, weight: .semibold, design: .serif),
+        amountFont: .system(.body, design: .serif).weight(.semibold),
+        titleFont: .system(.headline, design: .serif),
+        bodyFont: .system(.body, design: .rounded),
+        captionFont: .system(.caption, design: .rounded),
+
+        cornerRadius: 14,
+        smallCornerRadius: 8,
+        spacing: 12,
+        padding: 16,
+        iconSize: 34,
+
+        backgroundTop: Color(light: Color(hex: 0xF8F1E6), dark: Color(hex: 0x1C1712)),
+        backgroundBottom: Color(light: Color(hex: 0xF2E8D8), dark: Color(hex: 0x16120E)),
+
+        cardShadowColor: Color(light: Color(hex: 0x7A5230).opacity(0.10), dark: Color.black.opacity(0.30)),
+        cardShadowRadius: 8,
+        cardShadowY: 3,
+        cardBorder: Color(light: Color(hex: 0xE2D6C2), dark: Color.white.opacity(0.05)),
+        cardBorderWidth: 1,
+
+        badgeFillOpacity: 0.20,
+
+        heroGradientStart: Color(light: Color(hex: 0xA84A28), dark: Color(hex: 0x8F3E20)),
+        heroGradientEnd: Color(light: Color(hex: 0xB86A35), dark: Color(hex: 0xA55A2C)),
+        heroTextPrimary: .white,
+        heroTextSecondary: Color.white.opacity(0.85),
+        heroShadowColor: Color(light: Color(hex: 0xA84A28).opacity(0.28), dark: Color.black.opacity(0.45)),
+        heroShadowRadius: 16,
+        heroTintsBalance: false,
+        onAccent: Color(light: .white, dark: Color(hex: 0x2A140A)),
+        warning: Color(hex: 0xD99A2B)
+    )
+
+    /// Style 6 — Contraste : noir et blanc nets, accent orange / jaune vif, sans ombres, bordures marquées.
+    static let contrast = Theme(
+        id: "contrast",
+        name: "Contraste",
+
+        background: Color(light: .white, dark: .black),
+        surface: Color(light: .white, dark: Color(hex: 0x0D0D0D)),
+        surfaceSecondary: Color(light: Color(hex: 0xEDEDED), dark: Color(hex: 0x262626)),
+        separator: Color(light: .black, dark: .white),
+
+        textPrimary: Color(light: .black, dark: .white),
+        textSecondary: Color(light: Color(hex: 0x333333), dark: Color(hex: 0xD9D9D9)),
+        textTertiary: Color(light: Color(hex: 0x595959), dark: Color(hex: 0xB3B3B3)),
+
+        accent: Color(light: Color(hex: 0xC2410C), dark: Color(hex: 0xFFD60A)),
+        positive: Color(light: Color(hex: 0x006B2E), dark: Color(hex: 0x4DFF88)),
+        negative: Color(light: Color(hex: 0xB00020), dark: Color(hex: 0xFF6B6B)),
+
+        categoryPalette: contrastPalette,
+        categoryFallback: Color(hex: 0x707070),
+
+        fontDesign: .default,
+        largeAmountFont: .system(size: 38, weight: .heavy, design: .default),
+        amountFont: .system(.body, design: .default).weight(.bold),
+        titleFont: .system(.headline, design: .default).weight(.heavy),
+        bodyFont: .system(.body, design: .default),
+        captionFont: .system(.caption, design: .default).weight(.semibold),
+
+        cornerRadius: 10,
+        smallCornerRadius: 6,
+        spacing: 12,
+        padding: 16,
+        iconSize: 36,
+
+        backgroundTop: Color(light: .white, dark: .black),
+        backgroundBottom: Color(light: .white, dark: .black),
+
+        cardShadowColor: .clear,
+        cardShadowRadius: 0,
+        cardShadowY: 0,
+        cardBorder: Color(light: .black, dark: .white),
+        cardBorderWidth: 1.5,
+
+        badgeFillOpacity: 0.30,
+
+        heroGradientStart: Color(light: .black, dark: Color(hex: 0xFFD60A)),
+        heroGradientEnd: Color(light: Color(hex: 0x222222), dark: Color(hex: 0xFFB000)),
+        heroTextPrimary: Color(light: .white, dark: .black),
+        heroTextSecondary: Color(light: Color.white.opacity(0.88), dark: Color.black.opacity(0.80)),
+        heroShadowColor: .clear,
+        heroShadowRadius: 0,
+        heroTintsBalance: false,
+        onAccent: Color(light: .white, dark: .black),
+        warning: Color(light: Color(hex: 0xB85C00), dark: Color(hex: 0xFFB000))
     )
 }
 

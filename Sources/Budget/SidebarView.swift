@@ -46,16 +46,19 @@ struct SidebarView: View {
                     .tag(SidebarItem.accounts)
                 SidebarRow(title: "Statistiques", symbol: "chart.pie", tint: palette(3), info: nil)
                     .tag(SidebarItem.stats)
-            } header: {
-                SidebarSummary(wealth: showFigures && showWealth ? euros(store.totalBalance()) : nil,
-                               spent: showFigures && showSpent ? euros(spent) : nil,
-                               income: showFigures && showIncome ? euros(earned) : nil,
-                               balance: showFigures && showBalance ? euros(earned - spent) : nil,
-                               balanceIsNegative: earned < spent)
-                    .padding(.bottom, theme.spacing)
             }
         }
         .listStyle(.sidebar)
+        // En-tête fixe (logo, nom, chiffres) : hors de la liste, pour ne pas être une section repliable.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            SidebarSummary(wealth: showFigures && showWealth ? euros(store.totalBalance()) : nil,
+                           spent: showFigures && showSpent ? euros(spent) : nil,
+                           income: showFigures && showIncome ? euros(earned) : nil,
+                           balance: showFigures && showBalance ? euros(earned - spent) : nil,
+                           balanceIsNegative: earned < spent)
+                .padding(.horizontal, theme.padding)
+                .padding(.bottom, theme.spacing)
+        }
         .scrollContentBackground(.hidden)
         .navigationTitle("Budget")
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }

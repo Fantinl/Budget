@@ -44,15 +44,7 @@ struct SidebarSummary: View {
     var body: some View {
         VStack(alignment: .leading, spacing: theme.spacing) {
             HStack(spacing: theme.spacing) {
-                Image(systemName: "eurosign")
-                    .font(.system(size: 16, weight: .bold, design: theme.fontDesign))
-                    .foregroundStyle(theme.onAccent)
-                    .frame(width: 32, height: 32)
-                    .background(
-                        LinearGradient(colors: [theme.heroGradientStart, theme.heroGradientEnd],
-                                       startPoint: .topLeading, endPoint: .bottomTrailing),
-                        in: RoundedRectangle(cornerRadius: theme.smallCornerRadius + 2, style: .continuous))
-                    .background(theme.accent, in: RoundedRectangle(cornerRadius: theme.smallCornerRadius + 2, style: .continuous))
+                AppLogo(size: 34)
                 Text("Budget")
                     .font(theme.titleFont)
                     .foregroundStyle(theme.textPrimary)
@@ -86,5 +78,26 @@ struct SidebarSummary: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
+    }
+}
+
+/// Logo de l'app (son icône) ; repli sur un symbole si l'icône n'est pas disponible.
+struct AppLogo: View {
+    @Environment(\.theme) private var theme
+    let size: CGFloat
+
+    var body: some View {
+        #if os(macOS)
+        Image(nsImage: NSApp.applicationIconImage)
+            .resizable()
+            .interpolation(.high)
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
+        #else
+        Image(systemName: "chart.pie.fill")
+            .font(theme.titleFont)
+            .foregroundStyle(theme.accent)
+            .frame(width: size, height: size)
+        #endif
     }
 }
