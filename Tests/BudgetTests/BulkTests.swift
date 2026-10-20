@@ -26,7 +26,7 @@ final class BulkTests: StoreTestCase {
         XCTAssertEqual(store.deleteTransactions(ids: [UUID()]), 0)
     }
 
-    func testDuplicateKeepsFieldsButResetsDateAndRecurringLink() {
+    func testDuplicateKeepsFieldsAndDateButDropsRecurringLink() {
         let store = makeStore()
         var source = expense(3, "groceries", note: "Pain", on: day(2020, 1, 1))
         source.recurringID = UUID()
@@ -37,7 +37,7 @@ final class BulkTests: StoreTestCase {
         XCTAssertEqual(copies[0].amount, 3)
         XCTAssertEqual(copies[0].note, "Pain")
         XCTAssertNil(copies[0].recurringID)
-        XCTAssertTrue(Calendar.current.isDateInToday(copies[0].date))
+        XCTAssertEqual(copies[0].date, source.date) // la copie garde la date de l'original
         XCTAssertEqual(store.transactions.count, 2)
     }
 }

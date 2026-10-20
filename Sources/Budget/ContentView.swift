@@ -278,8 +278,7 @@ struct ContentView: View {
             if !transaction.isTransfer {
                 Button("Dupliquer", systemImage: "plus.square.on.square") {
                     var copy = transaction
-                    copy.id = UUID()
-                    copy.date = .now
+                    copy.id = UUID() // même date que l'original
                     copy.recurringID = nil
                     draft = Draft(transaction: copy, isNew: true)
                 }

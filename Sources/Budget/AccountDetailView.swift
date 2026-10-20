@@ -219,15 +219,14 @@ struct AccountDetailView: View {
         }
     }
 
-    /// Copie datée d'aujourd'hui, sans lien avec une récurrence ; un virement est dupliqué en entier.
+    /// Copie à la même date, sans lien avec une récurrence ; un virement est dupliqué en entier.
     private func duplicate(_ transaction: Transaction) {
         if let id = transaction.transferID, let legs = store.transferLegs(id: id) {
             store.createTransfer(from: legs.out.resolvedAccountID, to: legs.in.resolvedAccountID,
-                                 amount: legs.out.amount, date: .now, note: legs.out.note)
+                                 amount: legs.out.amount, date: legs.out.date, note: legs.out.note)
         } else {
             var copy = transaction
             copy.id = UUID()
-            copy.date = .now
             copy.recurringID = nil
             store.upsert(copy)
         }

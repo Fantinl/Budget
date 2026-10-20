@@ -33,7 +33,7 @@ extension BudgetStore {
         return count
     }
 
-    /// Copie les opérations (datées d'aujourd'hui, sans lien récurrent) ; les virements sont ignorés.
+    /// Copie les opérations (même date que l'original, sans lien récurrent) ; les virements sont ignorés.
     /// Renvoie les copies créées.
     @discardableResult
     func duplicateTransactions(ids: Set<UUID>) -> [Transaction] {
@@ -41,8 +41,7 @@ extension BudgetStore {
             .filter { ids.contains($0.id) && !$0.isTransfer }
             .map { source in
                 var copy = source
-                copy.id = UUID()
-                copy.date = .now
+                copy.id = UUID() // même date que l'original
                 copy.recurringID = nil
                 return copy
             }
