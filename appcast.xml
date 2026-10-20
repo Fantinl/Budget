@@ -6,6 +6,15 @@
     <link>https://github.com/Fantinl/Budget</link>
     <language>fr</language>
     <item>
+      <title>Budget 0.5.0</title>
+      <pubDate>Tue, 20 Oct 2026 23:09:54 +0200</pubDate>
+      <sparkle:version>6</sparkle:version>
+      <sparkle:shortVersionString>0.5.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>Réorganisation des catégories et des dépenses rapides (flèches ↑ ↓ et clic droit)</p><p>Profil étudiant et compte Izly (option, désactivée par défaut) : repas Crous en un clic, recharges Izly reconnues à l&#x27;import du relevé</p><p>Ajuster le solde d&#x27;un compte (Izly, espèces…) à partir du solde réel</p><p>Dupliquer une opération garde désormais sa date d&#x27;origine</p>]]></description>
+      <enclosure url="https://github.com/Fantinl/Budget/releases/download/v0.5.0/Budget.zip" type="application/octet-stream" sparkle:edSignature="MTEzhwVtGUXHjffxso5M1LfWwZaq8lBQMxKdwkn2GvSYg7VDuBHnRXPn8+HWWnngv29t5ts9ffWe9GIIl8H5Ag==" length="6278498" />
+    </item>
+    <item>
       <title>Budget 0.4.0</title>
       <pubDate>Tue, 20 Oct 2026 00:04:34 +0200</pubDate>
       <sparkle:version>5</sparkle:version>
