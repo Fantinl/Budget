@@ -93,45 +93,10 @@ struct ContentView: View {
         NavigationStack {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: theme.padding) {
-                    if let currentAccount { accountHeader(currentAccount) }
-                    MonthPicker(selection: $month, mode: .month, monthsWithData: monthsWithData)
-                        .frame(maxWidth: .infinity)
-                    FilterChips(filter: $filter)
-                    ExpressEntryBar(accountID: accountID) { draft = Draft(transaction: $0, isNew: true) }
-                    QuickAddBar(month: $month, draft: $draft, toast: $toast, accountID: accountID)
-                    MonthSummaryView(transactions: monthTransactions, month: month)
-
-                    if let izlySummary { izlyRow(izlySummary) }
-
-                    if days.isEmpty && izlySummary == nil {
-                        ContentUnavailableView(
-                            hasActiveFilterOrSearch ? "Aucun résultat" : "Aucune opération ce mois-ci",
-                            systemImage: hasActiveFilterOrSearch ? "magnifyingglass" : "tray",
-                            description: Text(!hasActiveFilterOrSearch ? "Ajoute une dépense avec le bouton « Ajouter »." : "")
-                        )
-                        .foregroundStyle(theme.textSecondary)
-                        .padding(.top, theme.padding)
-                    }
-
+                    listHeader
+                    emptyState
                     ForEach(days, id: \.day) { group in
-                        VStack(alignment: .leading, spacing: theme.spacing / 2) {
-                            Text(group.day.formatted(.dateTime.weekday(.wide).day().month(.wide)).capitalized)
-                                .font(theme.captionFont)
-                                .foregroundStyle(theme.textSecondary)
-                                .padding(.leading, theme.spacing / 2)
-
-                            Card(padded: false) {
-                                VStack(spacing: 0) {
-                                    ForEach(Array(group.items.enumerated()), id: \.element.id) { index, transaction in
-                                        if index > 0 {
-                                            Divider().overlay(theme.separator)
-                                                .padding(.leading, theme.padding + theme.iconSize + theme.spacing)
-                                        }
-                                        row(transaction)
-                                    }
-                                }
-                            }
-                        }
+                        dayGroup(group.day, items: group.items)
                     }
                 }
                 .padding(theme.padding)
@@ -167,35 +132,7 @@ struct ContentView: View {
             } message: {
                 Text("Les virements sont supprimés avec leur opération jumelle.")
             }
-            .overlay(alignment: .bottom) {
-                VStack(spacing: theme.spacing) {
-                    if let toast {
-                        QuickAddToastView(toast: toast) {
-                            withAnimation(.smooth) { self.toast = nil }
-                        }
-                        .id(toast.id)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
-                    if selection.isEmpty {
-                        HStack {
-                            Spacer()
-                            addButton
-                        }
-                        .padding([.horizontal, .bottom], theme.padding)
-                    } else {
-                        SelectionActionBar(
-                            selected: selectedTransactions,
-                            onCategory: applyCategory,
-                            onAccount: applyAccount,
-                            onDuplicate: duplicateSelection,
-                            onDelete: { confirmDelete = true },
-                            onClose: clearSelection
-                        )
-                        .padding([.horizontal, .bottom], theme.padding)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
-                }
-            }
+            .overlay(alignment: .bottom) { bottomBar }
             .animation(.smooth, value: selection.isEmpty)
             #if os(iOS)
             .searchable(text: $search, prompt: "Rechercher")
@@ -435,6 +372,93 @@ struct ContentView: View {
         .help("Rechercher (⌘F)")
     }
     #endif
+
+    // MARK: - Morceaux de la liste (découpés pour que le compilateur reste rapide)
+
+    /// En-tête : compte, mois, filtres, saisie express, ajouts rapides, résumé et ligne Izly.
+    @ViewBuilder private var listHeader: some View {
+        if let currentAccount { accountHeader(currentAccount) }
+        MonthPicker(selection: $month, mode: .month, monthsWithData: monthsWithData)
+            .frame(maxWidth: .infinity)
+        FilterChips(filter: $filter)
+        ExpressEntryBar(accountID: accountID) { draft = Draft(transaction: $0, isNew: true) }
+        QuickAddBar(month: $month, draft: $draft, toast: $toast, accountID: accountID)
+        MonthSummaryView(transactions: monthTransactions, month: month)
+        if let izlySummary { izlyRow(izlySummary) }
+    }
+
+    @ViewBuilder private var emptyState: some View {
+        if days.isEmpty && izlySummary == nil {
+            let filtered = hasActiveFilterOrSearch
+            ContentUnavailableView(
+                filtered ? "Aucun résultat" : "Aucune opération ce mois-ci",
+                systemImage: filtered ? "magnifyingglass" : "tray",
+                description: Text(filtered ? "" : "Ajoute une dépense avec le bouton « Ajouter ».")
+            )
+            .foregroundStyle(theme.textSecondary)
+            .padding(.top, theme.padding)
+        }
+    }
+
+    /// Retrait des séparateurs, aligné après la pastille de catégorie.
+    private var separatorInset: CGFloat {
+        let padding: CGFloat = theme.padding
+        let icon: CGFloat = theme.iconSize
+        let spacing: CGFloat = theme.spacing
+        return padding + icon + spacing
+    }
+
+    /// Une carte par jour : la date puis les opérations.
+    private func dayGroup(_ day: Date, items: [Transaction]) -> some View {
+        VStack(alignment: .leading, spacing: theme.spacing / 2) {
+            Text(day.formatted(.dateTime.weekday(.wide).day().month(.wide)).capitalized)
+                .font(theme.captionFont)
+                .foregroundStyle(theme.textSecondary)
+                .padding(.leading, theme.spacing / 2)
+            Card(padded: false) {
+                VStack(spacing: 0) {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, transaction in
+                        if index > 0 {
+                            Divider().overlay(theme.separator)
+                                .padding(.leading, separatorInset)
+                        }
+                        row(transaction)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Bas de l'écran : bandeau d'ajout rapide, bouton « Ajouter » ou barre d'actions de la sélection.
+    private var bottomBar: some View {
+        VStack(spacing: theme.spacing) {
+            if let toast {
+                QuickAddToastView(toast: toast) {
+                    withAnimation(.smooth) { self.toast = nil }
+                }
+                .id(toast.id)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+            if selection.isEmpty {
+                HStack {
+                    Spacer()
+                    addButton
+                }
+                .padding([.horizontal, .bottom], theme.padding)
+            } else {
+                SelectionActionBar(
+                    selected: selectedTransactions,
+                    onCategory: applyCategory,
+                    onAccount: applyAccount,
+                    onDuplicate: duplicateSelection,
+                    onDelete: { confirmDelete = true },
+                    onClose: clearSelection
+                )
+                .padding([.horizontal, .bottom], theme.padding)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+    }
 
     /// Bouton flottant « Ajouter », bien visible en bas à droite.
     private var addButton: some View {
