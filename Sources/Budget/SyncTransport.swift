@@ -76,9 +76,17 @@ struct FolderSyncTransport: SyncTransport {
     private func ensureDownloaded() async throws {
         let fm = FileManager.default
         guard fm.fileExists(atPath: folderURL.path) else { throw SyncError.folderUnavailable }
-        guard needsDownload else { return }
+        // Toujours demander le téléchargement : sur iPhone, un fichier arrivé dans iCloud Drive
+        // peut ne pas encore apparaître dans le dossier tant qu'il n'a pas été téléchargé.
         try? fm.startDownloadingUbiquitousItem(at: fileURL)
+        let inICloud = (try? folderURL.resourceValues(forKeys: [.isUbiquitousItemKey]).isUbiquitousItem) == true
         let deadline = Date.now.addingTimeInterval(downloadTimeout)
+        // Dossier iCloud sans fichier visible : on attend qu'il arrive ; s'il n'arrive pas,
+        // c'est que personne n'a encore synchronisé (premier appareil).
+        while inICloud && !fm.fileExists(atPath: fileURL.path) && Date.now < deadline {
+            try? fm.startDownloadingUbiquitousItem(at: fileURL)
+            try await Task.sleep(for: .milliseconds(250))
+        }
         while needsDownload {
             if Date.now > deadline { throw SyncError.downloadTimeout }
             try await Task.sleep(for: .milliseconds(250))
