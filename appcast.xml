@@ -6,6 +6,15 @@
     <link>https://github.com/Fantinl/Budget</link>
     <language>fr</language>
     <item>
+      <title>Budget 0.7.0</title>
+      <pubDate>Wed, 21 Oct 2026 00:24:06 +0200</pubDate>
+      <sparkle:version>8</sparkle:version>
+      <sparkle:shortVersionString>0.7.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>Sélection multiple : ajouter ou retirer des tags, modifier plusieurs opérations à la fois</p><p>Izly : bouton Recharger sur sa page, retiré des autres choix de compte</p><p>Barre latérale : en-tête fixe avec le logo de l&#x27;app, colonne plus large</p><p>4 nouveaux thèmes : Océan, Forêt, Sable et Contraste (Réglages → Apparence)</p>]]></description>
+      <enclosure url="https://github.com/Fantinl/Budget/releases/download/v0.7.0/Budget.zip" type="application/octet-stream" sparkle:edSignature="J7Mcrrg71c1nBPARWQ/tCkkjz9/5cGBuv8BGFXqTgW02Z838odtLGIiicXhAGxWXq5TOA3SX/zDqOo2m/QK6BQ==" length="7155910" />
+    </item>
+    <item>
       <title>Budget 0.6.0</title>
       <pubDate>Tue, 20 Oct 2026 23:52:05 +0200</pubDate>
       <sparkle:version>7</sparkle:version>
