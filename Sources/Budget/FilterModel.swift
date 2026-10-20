@@ -57,11 +57,11 @@ struct FilterForm: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
             }
-            if showAccount && store.activeAccounts.count > 1 {
+            if showAccount && store.selectableAccounts.count > 1 {
                 Section("Compte") {
                     Picker("Compte", selection: $filter.accountID) {
                         Text("Tous").tag(String?.none)
-                        ForEach(store.activeAccounts) { Text($0.name).tag(String?.some($0.id)) }
+                        ForEach(store.selectableAccounts) { Text($0.name).tag(String?.some($0.id)) }
                     }
                     .labelsHidden()
                 }

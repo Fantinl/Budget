@@ -124,6 +124,14 @@ private struct SettingsQuickSheet: View {
             && categories.contains { $0.id == draft.quick.categoryID }
     }
 
+    /// Comptes proposés : les sélectionnables, plus le compte déjà choisi s'il n'en fait pas partie (ex. Izly).
+    private var accountChoices: [Account] {
+        let choices = store.selectableAccounts
+        guard let id = draft.quick.accountID, !choices.contains(where: { $0.id == id }),
+              let current = store.accounts.first(where: { $0.id == id }) else { return choices }
+        return choices + [current]
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -145,13 +153,13 @@ private struct SettingsQuickSheet: View {
                     }
                     TextField("Note (facultative)", text: $draft.quick.note)
                     // Choix du compte seulement s'il y en a plusieurs (nil = compte principal).
-                    if store.activeAccounts.count > 1 {
+                    if accountChoices.count > 1 {
                         Picker("Compte", selection: Binding(
                             get: { draft.quick.accountID ?? "" },
                             set: { draft.quick.accountID = $0.isEmpty ? nil : $0 }
                         )) {
                             Text("Compte par défaut").tag("")
-                            ForEach(store.activeAccounts) { Text($0.name).tag($0.id) }
+                            ForEach(accountChoices) { Text($0.name).tag($0.id) }
                         }
                     }
                 }

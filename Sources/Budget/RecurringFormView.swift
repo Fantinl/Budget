@@ -28,7 +28,10 @@ struct RecurringFormView: View {
         parsedAmount != nil && !operation.name.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    private var activeAccounts: [Account] { store.accounts.filter { !$0.isArchived } }
+    /// Comptes sélectionnables, plus celui de la récurrente s'il est Izly (pour ne pas la casser).
+    private var activeAccounts: [Account] {
+        store.accounts.filter { !$0.isArchived && ($0.kind != .izly || $0.id == operation.accountID) }
+    }
 
     var body: some View {
         NavigationStack {

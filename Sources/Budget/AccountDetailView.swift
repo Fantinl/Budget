@@ -76,7 +76,9 @@ struct AccountDetailView: View {
         #endif
         .sheet(item: $editing) { AccountEditorSheet(draft: $0) }
         .sheet(item: $draft) { OperationEditor(draft: $0) }
-        .sheet(isPresented: $showTransfer) { TransferEditorView(fromAccountID: accountID) }
+        .sheet(isPresented: $showTransfer) { TransferEditorView(fromAccountID: account.kind == .izly ? nil : accountID,
+                           toAccountID: account.kind == .izly ? accountID : nil)
+        }
         .sheet(isPresented: $showAdjust) { AdjustBalanceSheet(accountID: accountID) }
     }
 
@@ -95,8 +97,7 @@ struct AccountDetailView: View {
             }
             HStack(spacing: theme.spacing) {
                 adjustButton
-                Button("Virement", systemImage: "arrow.left.arrow.right") { showTransfer = true }
-                    .disabled(store.activeAccounts.count < 2 || account.isArchived)
+                transferButton
                 Button("Modifier", systemImage: "pencil") { editing = AccountDraft(account: account) }
             }
             .font(theme.captionFont)
@@ -105,11 +106,23 @@ struct AccountDetailView: View {
         .accountCardBackground(account)
     }
 
+    /// Izly : « Recharger » (virement verrouillé vers ce compte) ; sinon virement générique.
+    @ViewBuilder private var transferButton: some View {
+        if account.kind == .izly {
+            Button("Recharger", systemImage: "plus.circle.fill") { showTransfer = true }
+                .buttonStyle(.borderedProminent)
+                .disabled(store.selectableAccounts.isEmpty || account.isArchived)
+        } else {
+            Button("Virement", systemImage: "arrow.left.arrow.right") { showTransfer = true }
+                .disabled(store.selectableAccounts.count < 2 || account.isArchived)
+        }
+    }
+
     /// Mis en avant pour les comptes qu'on ne tient pas à la dépense près.
     @ViewBuilder private var adjustButton: some View {
         let button = Button("Ajuster le solde", systemImage: "equal.circle") { showAdjust = true }
             .disabled(account.isArchived)
-        if [.izly, .cash, .card].contains(account.kind) {
+        if [.cash, .card].contains(account.kind) {
             button.buttonStyle(.borderedProminent)
         } else {
             button

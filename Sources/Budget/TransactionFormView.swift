@@ -37,7 +37,7 @@ struct TransactionFormView: View {
 
                     Card { categoryGrid }
 
-                    if store.activeAccounts.count > 1 {
+                    if store.selectableAccounts.count > 1 {
                         Card { accountPicker }
                     }
 
@@ -145,10 +145,10 @@ struct TransactionFormView: View {
         }
     }
 
-    /// Comptes proposés : les actifs, plus celui de l'opération s'il est archivé.
+    /// Comptes proposés : les sélectionnables, plus celui de l'opération s'il est archivé ou Izly.
     private var availableAccounts: [Account] {
         let current = store.account(id: transaction.accountID)
-        let active = store.activeAccounts
+        let active = store.selectableAccounts
         return active.contains(current) ? active : active + [current]
     }
 

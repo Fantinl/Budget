@@ -15,6 +15,7 @@ struct AccountsView: View {
     private struct TransferRequest: Identifiable {
         let id = UUID()
         var fromAccountID: String?
+        var toAccountID: String?
     }
 
     enum Grouping: String, CaseIterable {
@@ -81,7 +82,7 @@ struct AccountsView: View {
             .sheet(item: $editing) { draft in
                 AccountEditorSheet(draft: draft)
             }
-            .sheet(item: $transfer) { TransferEditorView(fromAccountID: $0.fromAccountID) }
+            .sheet(item: $transfer) { TransferEditorView(fromAccountID: $0.fromAccountID, toAccountID: $0.toAccountID) }
             .sheet(item: $adjusting) { AdjustBalanceSheet(accountID: $0.id) }
             .accountDeletionDialog(item: $pendingDelete)
         }
@@ -186,7 +187,11 @@ struct AccountsView: View {
             if !account.isArchived {
                 Button("Ajuster le solde…", systemImage: "equal.circle") { adjusting = account }
             }
-            if !account.isArchived && store.activeAccounts.count > 1 {
+            if !account.isArchived && account.kind == .izly && !store.selectableAccounts.isEmpty {
+                Button("Recharger…", systemImage: "plus.circle") {
+                    transfer = TransferRequest(fromAccountID: nil, toAccountID: account.id)
+                }
+            } else if !account.isArchived && account.kind != .izly && store.selectableAccounts.count > 1 {
                 Button("Virement depuis ce compte…", systemImage: "arrow.left.arrow.right") {
                     transfer = TransferRequest(fromAccountID: account.id)
                 }
@@ -202,7 +207,7 @@ struct AccountsView: View {
 
     /// Ajout de compte et virement, côte à côte.
     private var actionsRow: some View {
-        let canTransfer = store.activeAccounts.count >= 2
+        let canTransfer = store.selectableAccounts.count >= 2
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 12) {
                 addCard

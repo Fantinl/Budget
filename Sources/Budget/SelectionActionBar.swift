@@ -7,10 +7,15 @@ struct SelectionActionBar: View {
     let selected: [Transaction]
     let onCategory: (Category) -> Void
     let onAccount: (Account) -> Void
+    let onEdit: () -> Void
     let onDuplicate: () -> Void
     let onDelete: () -> Void
     let onClose: () -> Void
 
+    @State private var showNewTag = false
+    @State private var newTagName = ""
+
+    private var ids: Set<UUID> { Set(selected.map(\.id)) }
     private var editable: [Transaction] { selected.filter { !$0.isTransfer } }
     private var kinds: [TransactionKind] { TransactionKind.allCases.filter { kind in editable.contains { $0.kind == kind } } }
 
@@ -46,10 +51,13 @@ struct SelectionActionBar: View {
                     } label: { Label("Catégorie", systemImage: "tag") }
                         .disabled(editable.isEmpty)
                     Menu {
-                        ForEach(store.activeAccounts) { account in
+                        ForEach(store.selectableAccounts) { account in
                             Button(account.name) { onAccount(account) }
                         }
                     } label: { Label("Compte", systemImage: "building.columns") }
+                        .disabled(editable.isEmpty)
+                    tagsMenu
+                    Button("Modifier…", systemImage: "pencil", action: onEdit)
                         .disabled(editable.isEmpty)
                     Button("Dupliquer", systemImage: "plus.square.on.square", action: onDuplicate)
                         .disabled(editable.isEmpty)
@@ -72,5 +80,45 @@ struct SelectionActionBar: View {
             .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: 640)
+        .alert("Nouveau tag", isPresented: $showNewTag) {
+            TextField("Nom du tag", text: $newTagName)
+            Button("Annuler", role: .cancel) {}
+            Button("Ajouter", action: createTag)
+        }
+    }
+
+    // MARK: Tags
+
+    private var tagsMenu: some View {
+        Menu {
+            ForEach(store.tags) { tag in
+                let state = store.tagState(tag, in: ids)
+                Button(tag.name, systemImage: icon(for: state)) { toggle(tag, state) }
+            }
+            if !store.tags.isEmpty { Divider() }
+            Button("Nouveau tag…", systemImage: "plus") {
+                newTagName = ""
+                showNewTag = true
+            }
+            Button("Retirer tous les tags", systemImage: "tag.slash") { store.removeAllTags(from: ids) }
+        } label: { Label("Tags", systemImage: "number") }
+    }
+
+    private func icon(for state: BulkTagState) -> String {
+        switch state {
+        case .all: "checkmark"
+        case .some: "minus"
+        case .none: "circle"
+        }
+    }
+
+    /// Ajoute le tag partout, sauf si toutes les opérations l'ont déjà : il est alors retiré.
+    private func toggle(_ tag: Tag, _ state: BulkTagState) {
+        if state == .all { store.removeTag(tag, from: ids) } else { store.addTag(tag, to: ids) }
+    }
+
+    private func createTag() {
+        guard !newTagName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        store.addTag(store.addTag(named: newTagName), to: ids)
     }
 }

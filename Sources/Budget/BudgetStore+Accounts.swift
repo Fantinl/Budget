@@ -7,14 +7,20 @@ extension BudgetStore {
         accounts.first { $0.id == (id ?? Account.mainID) } ?? .main
     }
 
+    /// Comptes proposés dans les sélecteurs (formulaires, virements, import, filtres…) :
+    /// les comptes actifs SAUF Izly, qui se gère uniquement depuis sa propre page (recharges, repas).
+    var selectableAccounts: [Account] {
+        activeAccounts.filter { $0.kind != .izly }
+    }
+
     // MARK: Compte par défaut
     //
     // Dans une `Transaction`, accountID nil = compte principal (données historiques).
     // Dans une dépense rapide ou une récurrente, accountID nil = compte par défaut du moment.
 
-    /// Compte par défaut ; retombe sur le compte principal s'il a été archivé ou supprimé.
+    /// Compte par défaut ; retombe sur le compte principal s'il a été archivé, supprimé ou s'il est de type Izly.
     var defaultAccount: Account {
-        activeAccounts.first { $0.id == defaultAccountID } ?? account(id: Account.mainID)
+        selectableAccounts.first { $0.id == defaultAccountID } ?? account(id: Account.mainID)
     }
 
     func setDefaultAccount(_ account: Account) {

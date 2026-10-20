@@ -28,6 +28,7 @@ struct ContentView: View {
     @State private var anchor: UUID?
     /// iOS : mode sélection actif (cases à cocher).
     @State private var selectionMode = false
+    @State private var showBulkEdit = false
     @State private var confirmDelete = false
     /// Compte affiché ; nil = tous les comptes.
     var accountID: String? = nil
@@ -163,6 +164,9 @@ struct ContentView: View {
                 }
             }
             #endif
+            .sheet(isPresented: $showBulkEdit) {
+                BulkEditSheet(transactions: selectedTransactions)
+            }
             .sheet(item: $draft) { draft in
                 OperationEditor(draft: draft)
             }
@@ -450,6 +454,7 @@ struct ContentView: View {
                     selected: selectedTransactions,
                     onCategory: applyCategory,
                     onAccount: applyAccount,
+                    onEdit: { showBulkEdit = true },
                     onDuplicate: duplicateSelection,
                     onDelete: { confirmDelete = true },
                     onClose: clearSelection

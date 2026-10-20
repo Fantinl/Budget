@@ -84,10 +84,10 @@ struct StatsView: View {
             .onChange(of: period) { _, _ in offset = 0 }
 
             // Filtre par compte, seulement s'il y en a plusieurs
-            if store.activeAccounts.count > 1 {
+            if store.selectableAccounts.count > 1 {
                 Picker("Compte", selection: $accountID) {
                     Text("Tous les comptes").tag(String?.none)
-                    ForEach(store.activeAccounts) { Text($0.name).tag(Optional($0.id)) }
+                    ForEach(store.selectableAccounts) { Text($0.name).tag(Optional($0.id)) }
                 }
                 .labelsHidden()
                 .fixedSize()

@@ -7,6 +7,8 @@ struct TransferEditorView: View {
     @Environment(\.theme) private var theme
 
     let transferID: UUID?
+    /// Destination imposée (recharge Izly) : seule la source reste modifiable.
+    let lockedToID: String?
     @State private var fromID: String
     @State private var toID: String
     @State private var amountText = ""
@@ -16,10 +18,11 @@ struct TransferEditorView: View {
     @State private var loaded = false
     @FocusState private var amountFocused: Bool
 
-    init(transferID: UUID? = nil, fromAccountID: String? = nil) {
+    init(transferID: UUID? = nil, fromAccountID: String? = nil, toAccountID: String? = nil) {
         self.transferID = transferID
+        self.lockedToID = toAccountID
         _fromID = State(initialValue: fromAccountID ?? "")
-        _toID = State(initialValue: "")
+        _toID = State(initialValue: toAccountID ?? "")
     }
 
     private var isNew: Bool { transferID == nil }
@@ -33,13 +36,13 @@ struct TransferEditorView: View {
 
     private var legs: (out: Transaction, in: Transaction)? { transferID.flatMap { store.transferLegs(id: $0) } }
 
-    /// Comptes actifs, plus ceux déjà utilisés par le virement édité s'ils sont archivés.
+    /// Comptes sélectionnables, plus ceux déjà utilisés par le virement édité (archivés ou Izly).
     private var availableAccounts: [Account] {
-        var list = store.activeAccounts
+        var list = store.selectableAccounts
         for id in [legs?.out.resolvedAccountID, legs?.in.resolvedAccountID].compactMap({ $0 }) where !list.contains(where: { $0.id == id }) {
             list.append(store.account(id: id))
         }
-        return list
+        return list.filter { $0.id != lockedToID }
     }
 
     private var canSave: Bool { parsedAmount != nil && !fromID.isEmpty && !toID.isEmpty && fromID != toID }
@@ -77,6 +80,7 @@ struct TransferEditorView: View {
             ScrollView {
                 VStack(spacing: theme.padding) {
                     amountField
+                    if lockedToID != nil { amountShortcuts }
                     accountsSection
                     ForEach(warnings, id: \.self) { warning in
                         Label(warning, systemImage: "exclamationmark.triangle.fill")
@@ -104,7 +108,7 @@ struct TransferEditorView: View {
             }
             .screenBackground()
             .tint(theme.accent)
-            .navigationTitle(isNew ? "Nouveau virement" : "Modifier le virement")
+            .navigationTitle(lockedToID != nil ? "Recharger" : isNew ? "Nouveau virement" : "Modifier le virement")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -139,9 +143,14 @@ struct TransferEditorView: View {
             date = legs.out.date
             note = legs.out.note == BudgetStore.defaultTransferNote ? "" : legs.out.note
         } else {
-            let accounts = store.activeAccounts
+            let accounts = store.selectableAccounts
             if fromID.isEmpty || !accounts.contains(where: { $0.id == fromID }) { fromID = store.defaultAccount.id }
-            toID = accounts.first { $0.id != fromID }?.id ?? ""
+            if let lockedToID {
+                toID = lockedToID
+                if fromID == lockedToID { fromID = accounts.first?.id ?? "" }
+            } else {
+                toID = accounts.first { $0.id != fromID }?.id ?? ""
+            }
             amountFocused = true
         }
     }
@@ -178,7 +187,25 @@ struct TransferEditorView: View {
         .padding(.vertical, theme.spacing)
     }
 
-    private var accountsSection: some View {
+    private var amountShortcuts: some View {
+        HStack(spacing: theme.spacing) {
+            ForEach([10, 20, 50], id: \.self) { value in
+                Button("\(value) €") { amountText = String(value) }
+                    .buttonStyle(.bordered)
+                    .font(theme.bodyFont)
+            }
+        }
+    }
+
+    @ViewBuilder private var accountsSection: some View {
+        if lockedToID != nil {
+            Card { accountPicker(title: "Depuis", selection: $fromID, excluded: toID) }
+        } else {
+            unlockedAccounts
+        }
+    }
+
+    private var unlockedAccounts: some View {
         VStack(spacing: theme.spacing) {
             Card { accountPicker(title: "De", selection: $fromID, excluded: toID) }
             Button {
