@@ -49,6 +49,4 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-        UIFileSharingEnabled: true
-        LSSupportsOpeningDocumentsInPlace: true
         ITSAppUsesNonExemptEncryption: false

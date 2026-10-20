@@ -43,10 +43,29 @@ final class SyncCoordinator {
         store.sync.onLocalChange = { [weak self] in self?.scheduleSync() }
     }
 
+    /// Vrai si l'URL est dans le conteneur privé de l'app (Documents, Application Support…).
+    static func isAppPrivateFolder(_ url: URL) -> Bool {
+        let container = URL.homeDirectory.standardizedFileURL.resolvingSymlinksInPath().path
+        let path = url.standardizedFileURL.resolvingSymlinksInPath().path
+        #if os(iOS)
+        return path.hasPrefix(container)
+        #else
+        // Sur Mac, l'app n'est pas isolée : seul son propre dossier de données est exclu.
+        let own = BudgetStore.defaultDirectory.standardizedFileURL.resolvingSymlinksInPath().path
+        return path.hasPrefix(own)
+        #endif
+    }
+
     // MARK: - Configuration
 
     /// Mémorise le dossier choisi dans le sélecteur de fichiers et lance une première synchro.
     func chooseFolder(_ url: URL) async {
+        // Le dossier doit être partagé entre les appareils : pas le dossier privé de l'app
+        // (« Sur mon iPhone → Budget » dans Fichiers), que l'autre appareil ne voit jamais.
+        if Self.isAppPrivateFolder(url) {
+            lastError = "Ce dossier est privé à cet appareil. Choisis le dossier « Budget » dans iCloud Drive (pas « Sur mon iPhone »)."
+            return
+        }
         do {
             try SyncFolderBookmark.save(url, defaults: defaults)
         } catch {
