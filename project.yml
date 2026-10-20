@@ -1,0 +1,54 @@
+# Projet Xcode de l'app iPhone. Régénère-le avec `xcodegen` (BudgetiOS.xcodeproj est ignoré par git).
+name: BudgetiOS
+options:
+  bundleIdPrefix: com.fantinlegros.budget
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: fr
+configFiles:
+  Debug: Config/Base.xcconfig
+  Release: Config/Base.xcconfig
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "0.7.0"
+    CURRENT_PROJECT_VERSION: "8"
+targets:
+  BudgetiOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Sources/Budget
+        excludes:
+          # Fichiers purement Mac
+          - BudgetApp.swift        # point d'entrée Mac (scènes, commandes, Sparkle)
+          - Updater.swift          # mises à jour Sparkle
+          - MenuBarPanel.swift     # icône / panneau de la barre des menus
+          - GlobalHotKey.swift     # raccourci clavier global
+          - SidebarView.swift      # barre latérale Mac (List(selection:) indisponible sur iPhone)
+          - ShortcutsView.swift    # liste des raccourcis clavier
+          - RootView.swift         # racine Mac (barre latérale) : remplacée par Sources/BudgetiOS
+      - path: Sources/BudgetiOS
+      - path: Support/iOS/Assets.xcassets
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Support/iOS/Info.plist
+        SWIFT_EMIT_LOC_STRINGS: NO
+    info:
+      path: Support/iOS/Info.plist
+      properties:
+        CFBundleDisplayName: Budget
+        CFBundleDevelopmentRegion: fr
+        LSApplicationCategoryType: public.app-category.finance
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        ITSAppUsesNonExemptEncryption: false

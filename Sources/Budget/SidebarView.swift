@@ -1,10 +1,5 @@
 import SwiftUI
 
-/// Élément sélectionné dans la barre latérale.
-enum SidebarItem: Hashable {
-    case dashboard, operations, accounts, stats
-}
-
 /// Barre latérale : sections de l'app.
 struct SidebarView: View {
     @Environment(BudgetStore.self) private var store

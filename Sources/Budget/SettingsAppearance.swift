@@ -14,6 +14,15 @@ struct SettingsAppearanceSection: View {
     @Environment(\.theme) private var theme
 
     var body: some View {
+        #if os(macOS)
+        sidebarSection
+        #endif
+        appearanceSection
+    }
+
+    #if os(macOS)
+    /// Chiffres de la barre latérale (Mac seulement : l'iPhone n'a pas de barre latérale).
+    private var sidebarSection: some View {
         Section {
             Toggle("Afficher des chiffres", isOn: $showFigures)
             if showFigures {
@@ -31,7 +40,10 @@ struct SettingsAppearanceSection: View {
                 .font(theme.captionFont)
                 .foregroundStyle(theme.textSecondary)
         }
+    }
+    #endif
 
+    private var appearanceSection: some View {
         Section("Apparence") {
             Picker("Mode", selection: $appearance) {
                 ForEach(AppearanceMode.allCases) { Text($0.label).tag($0) }

@@ -7,8 +7,6 @@ struct SettingsView: View {
     @Environment(BudgetStore.self) private var store
     #if os(macOS)
     @Environment(\.openWindow) private var openWindow
-    #else
-    @State private var showShortcuts = false
     #endif
 
     var body: some View {
@@ -64,17 +62,15 @@ struct SettingsView: View {
                 #if os(macOS)
                 SettingsMenuBarSection()
                 #endif
+                #if os(macOS)
                 Section {
                     Button {
-                        #if os(macOS)
                         openWindow(id: "shortcuts")
-                        #else
-                        showShortcuts = true
-                        #endif
                     } label: {
                         Label("Raccourcis clavier", systemImage: "keyboard")
                     }
                 }
+                #endif
                 Section {
                     Button("Relancer l'assistant de démarrage") { onboardingCompleted = false }
                 }
@@ -86,16 +82,6 @@ struct SettingsView: View {
             .screenBackground()
             .navigationTitle("Réglages")
             .bindsUndoToStore()
-            #if os(iOS)
-            .sheet(isPresented: $showShortcuts) {
-                NavigationStack {
-                    ShortcutsView()
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) { Button("OK") { showShortcuts = false } }
-                        }
-                }
-            }
-            #endif
         }
     }
 }

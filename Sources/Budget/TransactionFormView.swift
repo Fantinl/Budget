@@ -70,7 +70,14 @@ struct TransactionFormView: View {
             }
             .screenBackground()
             .tint(theme.accent)
+            #if os(iOS)
+            .navigationTitle(isNew ? "Nouvelle" : "Modifier")
+            #else
             .navigationTitle(isNew ? "Nouvelle opération" : "Modifier")
+            #endif
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Annuler") { dismiss() }

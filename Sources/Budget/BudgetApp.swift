@@ -2,7 +2,10 @@ import SwiftUI
 
 @main
 struct BudgetApp: App {
-    @State private var store = BudgetStore()
+    @State private var store: BudgetStore
+    /// Synchronisation par dossier iCloud Drive (réglages → Synchronisation).
+    @State private var coordinator: SyncCoordinator
+    @Environment(\.scenePhase) private var scenePhase
     /// Thème choisi dans les réglages (identifiant d'un `Theme` de `Theme.all`).
     @AppStorage("themeID") private var themeID = Theme.current.id
     /// Clair / sombre / automatique, choisi dans les réglages.
@@ -14,6 +17,9 @@ struct BudgetApp: App {
     #endif
 
     init() {
+        let store = BudgetStore()
+        _store = State(initialValue: store)
+        _coordinator = State(initialValue: SyncCoordinator(store: store))
         #if os(macOS)
         MenuBarCoordinator.shared.start()
         #endif
@@ -23,6 +29,8 @@ struct BudgetApp: App {
         WindowGroup(id: "main") {
             RootView()
                 .environment(store)
+                .environment(coordinator)
+                .task { coordinator.start() }
                 .environment(\.theme, Theme.named(themeID))
                 #if os(macOS)
                 .frame(minWidth: 460, minHeight: 560)
@@ -34,6 +42,7 @@ struct BudgetApp: App {
                 .preferredColorScheme(appearance.colorScheme)
                 #endif
         }
+        .onChange(of: scenePhase) { _, phase in coordinator.handleScenePhase(phase) }
         #if os(macOS)
         .defaultSize(width: 820, height: 780)
         #endif
@@ -70,6 +79,7 @@ struct BudgetApp: App {
         Settings {
             SettingsView()
                 .environment(store)
+                .environment(coordinator)
                 .environment(\.theme, Theme.named(themeID))
                 .frame(minWidth: 560, minHeight: 640)
         }

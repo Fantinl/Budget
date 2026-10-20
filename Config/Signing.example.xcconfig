@@ -1,0 +1,14 @@
+// Signature de l'app iPhone : copie ce fichier en « Signing.xcconfig » (ignoré par git) puis adapte-le.
+//
+//   cp Config/Signing.example.xcconfig Config/Signing.xcconfig
+//
+// Relance ensuite `xcodegen`. Tu peux aussi choisir ton équipe directement dans Xcode
+// (cible BudgetiOS > Signing & Capabilities), mais elle sera perdue à chaque `xcodegen`.
+
+// Identifiant de ton équipe Apple (10 caractères) : Xcode > Réglages > Comptes > ton équipe,
+// ou developer.apple.com > Compte > Adhésion. Un identifiant Apple gratuit suffit.
+DEVELOPMENT_TEAM = ABCDE12345
+
+// Préfixe d'identifiant d'app : doit être unique au monde, donc remplace-le par le tien
+// (ex. com.tonnom.budget). L'app iPhone aura l'identifiant « <préfixe>.ios ».
+BUNDLE_ID_PREFIX = com.tonnom.budget

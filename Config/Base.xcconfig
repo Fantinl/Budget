@@ -1,0 +1,5 @@
+// Réglages communs de la cible iOS. Les valeurs de signature viennent de Signing.xcconfig (facultatif, ignoré par git).
+DEVELOPMENT_TEAM =
+BUNDLE_ID_PREFIX = com.fantinlegros.budget
+#include? "Signing.xcconfig"
+PRODUCT_BUNDLE_IDENTIFIER = $(BUNDLE_ID_PREFIX).ios

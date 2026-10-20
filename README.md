@@ -84,6 +84,26 @@ Ouvre une [issue](../../issues) en décrivant ce que tu faisais, ce qui s'est pa
 
 ---
 
+## App iPhone (version de développement)
+
+L'app existe aussi sur iPhone (branche `ios`). Elle n'est pas sur l'App Store : tu la compiles toi-même et tu l'installes sur ton iPhone.
+
+**Prérequis** : un Mac avec Xcode, un identifiant Apple (gratuit) et un iPhone sous iOS 17 ou plus.
+
+```bash
+brew install xcodegen
+xcodegen                  # génère BudgetiOS.xcodeproj (ignoré par git)
+open BudgetiOS.xcodeproj
+```
+
+1. Dans Xcode, cible **BudgetiOS** > *Signing & Capabilities* : choisis ton équipe (ton identifiant Apple). Sinon, copie `Config/Signing.example.xcconfig` en `Config/Signing.xcconfig`, renseigne `DEVELOPMENT_TEAM` et `BUNDLE_ID_PREFIX` (un préfixe à toi, par exemple `com.tonnom.budget`), puis relance `xcodegen` : tes réglages survivent ainsi à chaque régénération.
+2. Branche l'iPhone et active le **mode développeur** (Réglages > Confidentialité et sécurité > Mode développeur, puis redémarrage).
+3. Choisis ton iPhone comme destination et lance avec **Run**. La première fois, fais confiance à ton profil dans Réglages > Général > VPN et gestion de l'appareil.
+
+Avec un compte Apple gratuit, l'app **expire au bout de 7 jours** : il suffit de la réinstaller depuis Xcode (tes données sont conservées). Astuce : dans *Window > Devices and Simulators*, coche « Connect via network » pour installer en Wi-Fi sans câble.
+
+**Synchronisation avec le Mac** : sur les deux appareils, ouvre Réglages > Synchronisation et choisis le même dossier iCloud Drive (le Mac doit aussi tourner avec la version de cette branche).
+
 ## Pour les développeurs
 
 App SwiftUI (macOS 14+, prête pour iOS 17+). Seule dépendance : Sparkle (mises à jour). Il faut Xcode installé.
