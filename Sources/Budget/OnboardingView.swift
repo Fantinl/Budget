@@ -5,6 +5,10 @@ import SwiftUI
 struct OnboardingView: View {
     @Environment(BudgetStore.self) private var store
     @Environment(\.theme) private var theme
+    @Environment(SyncCoordinator.self) private var sync: SyncCoordinator?
+    /// « J'utilise déjà Budget sur un autre appareil » : choix du dossier de synchro.
+    @State private var showSyncPicker = false
+    @State private var isJoiningSync = false
     var onFinish: () -> Void
 
     private enum Step: Int, CaseIterable { case welcome, student, account, recurring, quick, done }
@@ -174,9 +178,44 @@ struct OnboardingView: View {
                 .font(theme.bodyFont).foregroundStyle(theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 440)
+            if sync != nil { joinSyncButton }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, theme.padding * 3)
+    }
+
+    /// Récupère les données d'un autre appareil (dossier de synchro) au lieu de tout configurer.
+    private var joinSyncButton: some View {
+        VStack(spacing: theme.spacing / 2) {
+            Button {
+                showSyncPicker = true
+            } label: {
+                Label(isJoiningSync ? "Récupération…" : "J'utilise déjà Budget sur un autre appareil",
+                      systemImage: "arrow.triangle.2.circlepath.icloud")
+                    .font(theme.bodyFont)
+            }
+            .buttonStyle(.bordered)
+            .disabled(isJoiningSync)
+            Text("Choisis le dossier de synchronisation (iCloud Drive) utilisé sur ton autre appareil.")
+                .font(theme.captionFont).foregroundStyle(theme.textTertiary)
+                .multilineTextAlignment(.center)
+            if let error = sync?.lastError {
+                Text(error).font(theme.captionFont).foregroundStyle(theme.negative)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: 440)
+        .padding(.top, theme.spacing)
+        .fileImporter(isPresented: $showSyncPicker, allowedContentTypes: [.folder]) { result in
+            guard let sync, case .success(let url) = result else { return }
+            isJoiningSync = true
+            Task {
+                await sync.chooseFolder(url)
+                isJoiningSync = false
+                // Données récupérées : l'assistant est inutile.
+                if sync.lastError == nil { onFinish() }
+            }
+        }
     }
 
     // MARK: 2 · Compte par défaut
