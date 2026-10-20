@@ -24,6 +24,9 @@ final class BudgetStore {
     /// Gestionnaire d'annulation de la fenêtre active (voir BudgetStore+Undo.swift).
     @ObservationIgnored weak var undoManager: UndoManager?
 
+    /// Suivi des modifications pour la synchronisation (voir SyncMetadata.swift).
+    @ObservationIgnored let sync = SyncTracker()
+
     let directory: URL
     var transactionsURL: URL { directory.appending(path: "transactions.json") }
     var settingsURL: URL { directory.appending(path: "settings.json") }
@@ -47,6 +50,12 @@ final class BudgetStore {
         for index in accounts.indices where accounts[index].kind == .izly && accounts[index].mealPlan == nil {
             accounts[index].mealPlan = MealPlan()
         }
+        ensureRequiredRecords()
+        sync.didReload(self)
+    }
+
+    /// Le compte principal et les catégories « Autre » doivent toujours exister.
+    func ensureRequiredRecords() {
         if !accounts.contains(where: { $0.id == Account.mainID }) {
             accounts.insert(.main, at: 0)
         }
@@ -243,11 +252,13 @@ final class BudgetStore {
 
     func saveTransactions() {
         save(transactions, to: transactionsURL)
+        sync.trackTransactions(self)
     }
 
     func saveSettings() {
         save(Settings(categories: categories, quickExpenses: quickExpenses, accounts: accounts,
                       recurringOperations: recurringOperations, defaultAccountID: defaultAccountID, tags: tags), to: settingsURL)
+        sync.trackSettings(self)
     }
 
     func load<T: Decodable>(_ url: URL) -> T? {

@@ -41,6 +41,11 @@ struct SettingsView: View {
                     } label: {
                         Label("Données", systemImage: "externaldrive")
                     }
+                    NavigationLink {
+                        SettingsSyncView()
+                    } label: {
+                        Label("Synchronisation", systemImage: "icloud")
+                    }
                 }
                 Section {
                     Picker("Compte par défaut", selection: Binding(
