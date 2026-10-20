@@ -10,7 +10,8 @@ Une app Mac simple pour suivre ses dépenses, ses revenus et ses comptes.
 - Catégories personnalisables, budgets mensuels par catégorie avec alertes
 - Comptes courants, livrets (Livret A, LDDS…), PEA, assurance vie…, regroupés par type ou par banque, virements entre comptes
 - Opérations récurrentes (loyer, salaire, abonnements) créées automatiquement
-- Statistiques, prévision du solde de fin de mois
+- Tableau de bord : argent disponible, reste du mois, épargne, budgets et prochaines échéances d'un coup d'œil
+- Statistiques (avec le détail des opérations de chaque catégorie), prévision du solde de fin de mois
 - Import de relevés bancaires (CSV, Excel, OFX), export CSV, sauvegardes automatiques
 - Icône facultative dans la barre des menus (désactivée par défaut) : solde, saisie express et ajouts rapides sans ouvrir l'app
 - Mode clair / sombre, deux styles visuels

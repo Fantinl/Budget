@@ -9,6 +9,7 @@ struct TransactionFormView: View {
     @State private var transaction: Transaction
     @State private var amountText: String
     @FocusState private var amountFocused: Bool
+    @State private var newTagName = ""
 
     init(draft: Draft) {
         isNew = draft.isNew
@@ -43,6 +44,8 @@ struct TransactionFormView: View {
                     Card {
                         DateField(date: $transaction.date)
                     }
+
+                    Card { tagsSection }
 
                     Card {
                         TextField("Description", text: $transaction.note, prompt: Text("Facultatif"), axis: .vertical)
@@ -182,8 +185,50 @@ struct TransactionFormView: View {
         }
     }
 
+    /// Pastilles des tags (multi-sélection) et champ de création.
+    private var tagsSection: some View {
+        VStack(alignment: .leading, spacing: theme.spacing) {
+            if !store.tags.isEmpty {
+                Text("Tags")
+                    .font(theme.captionFont)
+                    .foregroundStyle(theme.textSecondary)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 70), spacing: theme.spacing, alignment: .leading)],
+                          alignment: .leading, spacing: theme.spacing) {
+                    ForEach(store.tags) { tag in
+                        Button { toggle(tag) } label: {
+                            TagChip(text: tag.name, color: theme.color(for: tag), selected: isSelected(tag))
+                                .contentShape(.capsule)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            TextField("Nouveau tag", text: $newTagName, prompt: Text("Nouveau tag").foregroundStyle(theme.textTertiary))
+                .textFieldStyle(.plain)
+                .font(theme.bodyFont)
+                .foregroundStyle(theme.textPrimary)
+                .onSubmit(addNewTag)
+        }
+    }
+
+    private func isSelected(_ tag: Tag) -> Bool { (transaction.tagIDs ?? []).contains(tag.id) }
+
+    private func toggle(_ tag: Tag) {
+        var ids = transaction.tagIDs ?? []
+        if let index = ids.firstIndex(of: tag.id) { ids.remove(at: index) } else { ids.append(tag.id) }
+        transaction.tagIDs = ids.isEmpty ? nil : ids
+    }
+
+    private func addNewTag() {
+        guard !newTagName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let tag = store.addTag(named: newTagName)
+        if !isSelected(tag) { toggle(tag) }
+        newTagName = ""
+    }
+
     private func save() {
         guard let amount = parsedAmount else { return }
+        if !newTagName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { addNewTag() }
         // Compte principal = nil (compatibilité avec les anciens fichiers).
         if transaction.accountID == Account.mainID { transaction.accountID = nil }
         transaction.amount = amount

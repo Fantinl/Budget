@@ -73,10 +73,14 @@ struct Transaction: Identifiable, Codable, Hashable {
     /// Virement entre deux comptes : deux opérations partagent cet identifiant
     /// (une dépense sur le compte source, un revenu sur le compte destination).
     var transferID: UUID?
+    /// Tags (identifiants de `Tag`), facultatifs, plusieurs possibles.
+    var tagIDs: [String]?
+    /// Repas Izly décompté automatiquement (voir `MealPlan`) ; nil pour une opération saisie.
+    var isAutoMeal: Bool?
 
     // La clé JSON reste « category » pour relire les fichiers de la première version.
     enum CodingKeys: String, CodingKey {
-        case id, amount, kind, note, date, accountID, recurringID, transferID
+        case id, amount, kind, note, date, accountID, recurringID, transferID, tagIDs, isAutoMeal
         case categoryID = "category"
     }
 
@@ -220,6 +224,8 @@ struct Account: Identifiable, Codable, Hashable {
     var autoRate: Bool?
     /// Date d'ouverture d'un PEL : détermine son taux.
     var openingDate: Date?
+    /// Compte Izly : décompte automatique des repas (nil = pas de décompte).
+    var mealPlan: MealPlan?
 
     init(id: String = UUID().uuidString, name: String, kind: AccountKind, colorIndex: Int,
          initialBalance: Decimal = 0, isArchived: Bool = false, bank: String? = nil,
@@ -254,6 +260,7 @@ struct Account: Identifiable, Codable, Hashable {
         marketValueDate = try c.decodeIfPresent(Date.self, forKey: .marketValueDate)
         autoRate = try c.decodeIfPresent(Bool.self, forKey: .autoRate)
         openingDate = try c.decodeIfPresent(Date.self, forKey: .openingDate)
+        mealPlan = try c.decodeIfPresent(MealPlan.self, forKey: .mealPlan)
     }
 
     /// Libellé de banque pour le regroupement.
@@ -349,4 +356,33 @@ enum StudentProfile {
     static let defaultMealPrice: Decimal = 1
     /// Mots repérant une recharge Izly dans un libellé de relevé bancaire.
     static let rechargeKeywords = ["IZLY"]
+}
+
+// MARK: - Tags
+
+/// Étiquette libre posée sur une opération (#vacances, #remboursable…), en plus de la catégorie.
+/// Une opération peut en avoir plusieurs. Gérés dans Réglages → Tags, comme les catégories.
+struct Tag: Identifiable, Codable, Hashable {
+    var id: String = UUID().uuidString
+    var name: String
+    var colorIndex: Int           // index dans `theme.categoryPalette`
+}
+
+// MARK: - Repas Izly
+
+/// Décompte automatique des repas sur un compte Izly : un repas par jour choisi, au prix indiqué.
+/// Les repas sont créés jusqu'à aujourd'hui (comme les récurrentes), puis l'utilisateur
+/// est invité chaque semaine à retirer les jours où il n'a pas mangé au Crous.
+struct MealPlan: Codable, Hashable {
+    var isEnabled = true
+    var price: Decimal = StudentProfile.defaultMealPrice
+    /// Jours concernés, numérotés comme `Calendar.component(.weekday)` (1 = dimanche … 7 = samedi).
+    var weekdays: Set<Int> = [2, 3, 4, 5, 6]   // lundi → vendredi
+    var categoryID = "restaurants"
+    /// Premier jour décompté.
+    var startDate: Date = Calendar.current.startOfDay(for: .now)
+    /// Dernier jour déjà décompté (nil = aucun).
+    var lastGeneratedDate: Date?
+    /// Dernière revue hebdomadaire faite par l'utilisateur.
+    var lastReviewDate: Date?
 }

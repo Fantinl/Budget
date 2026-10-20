@@ -37,10 +37,23 @@ struct ContentView: View {
         return store.accounts.first { $0.id == accountID }
     }
 
+    /// Opérations du mois (du compte affiché s'il y en a un), Izly comprises : sert au résumé du mois.
     private var monthTransactions: [Transaction] {
         let all = store.transactions(inMonthOf: month)
         guard let accountID else { return all }
         return all.filter { $0.resolvedAccountID == accountID }
+    }
+
+    /// Opérations listées : sans les opérations Izly, sauf dans la vue d'un compte.
+    private var listedTransactions: [Transaction] {
+        accountID == nil ? monthTransactions.filter { !store.isHiddenFromOperations($0) } : monthTransactions
+    }
+
+    /// Ligne récapitulative Izly du mois (vue « tous comptes », sans recherche ni filtre).
+    private var izlySummary: (count: Int, total: Decimal)? {
+        guard accountID == nil, !hasActiveFilterOrSearch else { return nil }
+        let summary = store.izlySpending(in: monthTransactions)
+        return summary.count > 0 ? summary : nil
     }
 
     /// Débuts de mois contenant des opérations (pour les pastilles du sélecteur).
@@ -49,11 +62,14 @@ struct ContentView: View {
     }
 
     private var filteredTransactions: [Transaction] {
-        var result = monthTransactions
+        var result = listedTransactions
         if filter.isActive { result = result.filter(filter.matches) }
         guard !search.isEmpty else { return result }
         return result.filter {
             $0.note.localizedStandardContains(search) || store.category(of: $0).label.localizedStandardContains(search)
+                || ($0.tagIDs ?? []).contains { id in
+                    store.tags.first { $0.id == id }?.name.localizedStandardContains(search) == true
+                }
         }
     }
 
@@ -85,7 +101,9 @@ struct ContentView: View {
                     QuickAddBar(month: $month, draft: $draft, toast: $toast, accountID: accountID)
                     MonthSummaryView(transactions: monthTransactions, month: month)
 
-                    if days.isEmpty {
+                    if let izlySummary { izlyRow(izlySummary) }
+
+                    if days.isEmpty && izlySummary == nil {
                         ContentUnavailableView(
                             hasActiveFilterOrSearch ? "Aucun résultat" : "Aucune opération ce mois-ci",
                             systemImage: hasActiveFilterOrSearch ? "magnifyingglass" : "tray",
@@ -242,6 +260,24 @@ struct ContentView: View {
                     .monospacedDigit()
                     .foregroundStyle(balance < 0 ? theme.negative : theme.textPrimary)
                 Text("Solde actuel")
+                    .font(theme.captionFont)
+                    .foregroundStyle(theme.textTertiary)
+            }
+        }
+    }
+
+    /// Récapitulatif non éditable des repas Izly du mois.
+    private func izlyRow(_ summary: (count: Int, total: Decimal)) -> some View {
+        let izly = store.accounts.first { $0.kind == .izly }
+        return Card {
+            HStack(spacing: theme.spacing) {
+                if let izly { AccountBadge(account: izly, size: theme.iconSize) }
+                Text("Izly : \(summary.count) repas · \(summary.total.euros)")
+                    .font(theme.bodyFont)
+                    .monospacedDigit()
+                    .foregroundStyle(theme.textPrimary)
+                Spacer()
+                Text("Détail dans le compte")
                     .font(theme.captionFont)
                     .foregroundStyle(theme.textTertiary)
             }

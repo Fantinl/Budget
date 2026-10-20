@@ -34,6 +34,7 @@ struct AccountDetailView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: theme.padding) {
                 header
+                if account.kind == .izly { MealPlanCard(accountID: accountID) }
                 monthSummary
                 chart
                 searchField
@@ -83,6 +84,10 @@ struct AccountDetailView: View {
         VStack(alignment: .trailing, spacing: theme.spacing) {
             AccountCardContent(account: account, large: true)
             if account.kind == .izly {
+                Text("≈ \(store.mealsRemaining(of: account)) repas restants")
+                    .font(theme.titleFont)
+                    .foregroundStyle(theme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 Text("Recopie le solde affiché dans l'app Izly pour enregistrer les repas non notés.")
                     .font(theme.captionFont)
                     .foregroundStyle(theme.textTertiary)

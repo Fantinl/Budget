@@ -7,12 +7,14 @@ struct RootView: View {
     #if os(macOS)
     @Environment(\.openSettings) private var openSettings
     #endif
-    @State private var selection: SidebarItem = .operations
+    @State private var selection: SidebarItem = .dashboard
     /// Assistant de démarrage terminé (affiché au premier lancement, relançable depuis les réglages).
     @AppStorage("onboardingCompleted") private var onboardingCompleted = false
     /// Relevé déposé sur la fenêtre (glisser-déposer) et survol en cours.
     @State private var droppedStatement: DroppedStatement?
     @State private var isDropTargeted = false
+    /// Compte Izly dont la revue hebdomadaire des repas est proposée au lancement.
+    @State private var mealReview: MealReviewTarget?
 
     private struct DroppedStatement: Identifiable {
         let id = UUID()
@@ -51,6 +53,9 @@ struct RootView: View {
         } isTargeted: { isDropTargeted = $0 }
         .overlay { if isDropTargeted { dropVeil } }
         .animation(.smooth(duration: 0.15), value: isDropTargeted)
+        .sheet(item: $mealReview) { target in
+            MealReviewSheet(accountID: target.id)
+        }
         .sheet(item: $droppedStatement) { dropped in
             ImportStatementView(initialURL: dropped.url)
         }
@@ -62,6 +67,11 @@ struct RootView: View {
             // Au lancement : sauvegarde du jour, puis échéances récurrentes passées.
             store.backupIfNeeded()
             store.generateDueRecurringOperations()
+            store.generateDueMeals() // repas Izly décomptés automatiquement
+            // Revue hebdomadaire des repas (pas pendant l'assistant de démarrage)
+            if onboardingCompleted, let account = store.needsMealReview() {
+                mealReview = MealReviewTarget(id: account.id)
+            }
             await store.refreshRates() // taux des livrets réglementés (au plus une fois par semaine)
         }
     }
@@ -89,6 +99,8 @@ struct RootView: View {
 
     @ViewBuilder private var detail: some View {
         switch selection {
+        case .dashboard:
+            DashboardView { selection = $0 }
         case .operations:
             ContentView()
         case .accounts:
@@ -97,4 +109,9 @@ struct RootView: View {
             StatsView(accountID: nil)
         }
     }
+}
+
+/// Cible de la feuille de revue des repas (identifiant du compte Izly).
+private struct MealReviewTarget: Identifiable {
+    let id: String
 }

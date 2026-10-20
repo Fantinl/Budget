@@ -19,7 +19,9 @@ extension Account {
         let count = max(paletteCount, 1)
         let used = Set(existing.map(\.colorIndex))
         let color = (0..<count).first { !used.contains($0) } ?? existing.count % count
-        return Account(id: id, name: "Izly", kind: .izly, colorIndex: color, initialBalance: balance)
+        var account = Account(id: id, name: "Izly", kind: .izly, colorIndex: color, initialBalance: balance)
+        account.mealPlan = MealPlan() // repas automatiques activés par défaut
+        return account
     }
 }
 

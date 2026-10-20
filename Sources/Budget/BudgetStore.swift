@@ -17,6 +17,7 @@ final class BudgetStore {
     var quickExpenses: [QuickExpense] = QuickExpense.defaults
     var accounts: [Account] = [.main]
     var recurringOperations: [RecurringOperation] = []
+    var tags: [Tag] = []
     /// Compte proposé par défaut pour les nouvelles opérations (réglages). Voir `defaultAccount`.
     var defaultAccountID: String = Account.mainID
     var errorMessage: String?
@@ -40,7 +41,12 @@ final class BudgetStore {
         quickExpenses = settings.quickExpenses
         accounts = settings.accounts
         recurringOperations = settings.recurringOperations
+        tags = settings.tags
         defaultAccountID = settings.defaultAccountID
+        // Comptes Izly créés avant le décompte automatique : un repas par jour (lun→ven) à partir d'aujourd'hui.
+        for index in accounts.indices where accounts[index].kind == .izly && accounts[index].mealPlan == nil {
+            accounts[index].mealPlan = MealPlan()
+        }
         if !accounts.contains(where: { $0.id == Account.mainID }) {
             accounts.insert(.main, at: 0)
         }
@@ -209,11 +215,13 @@ final class BudgetStore {
         var accounts = [Account.main]
         var recurringOperations: [RecurringOperation] = []
         var defaultAccountID = Account.mainID
+        var tags: [Tag] = []
 
         init() {}
 
         init(categories: [Category], quickExpenses: [QuickExpense], accounts: [Account],
-             recurringOperations: [RecurringOperation], defaultAccountID: String) {
+             recurringOperations: [RecurringOperation], defaultAccountID: String, tags: [Tag]) {
+            self.tags = tags
             self.categories = categories
             self.quickExpenses = quickExpenses
             self.accounts = accounts
@@ -229,6 +237,7 @@ final class BudgetStore {
             accounts = try c.decodeIfPresent([Account].self, forKey: .accounts) ?? [.main]
             recurringOperations = try c.decodeIfPresent([RecurringOperation].self, forKey: .recurringOperations) ?? []
             defaultAccountID = try c.decodeIfPresent(String.self, forKey: .defaultAccountID) ?? Account.mainID
+            tags = try c.decodeIfPresent([Tag].self, forKey: .tags) ?? []
         }
     }
 
@@ -238,7 +247,7 @@ final class BudgetStore {
 
     func saveSettings() {
         save(Settings(categories: categories, quickExpenses: quickExpenses, accounts: accounts,
-                      recurringOperations: recurringOperations, defaultAccountID: defaultAccountID), to: settingsURL)
+                      recurringOperations: recurringOperations, defaultAccountID: defaultAccountID, tags: tags), to: settingsURL)
     }
 
     func load<T: Decodable>(_ url: URL) -> T? {

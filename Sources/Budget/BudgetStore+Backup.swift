@@ -132,7 +132,7 @@ extension BudgetStore {
     func backupFileData() throws -> Data {
         let settings = Settings(categories: categories, quickExpenses: quickExpenses,
                                 accounts: accounts, recurringOperations: recurringOperations,
-                                defaultAccountID: defaultAccountID)
+                                defaultAccountID: defaultAccountID, tags: tags)
         return try Self.encoder.encode(BackupBundle(transactions: transactions, settings: settings))
     }
 

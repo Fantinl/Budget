@@ -32,6 +32,7 @@ struct TransactionRow: View {
                         .foregroundStyle(theme.textSecondary)
                         .lineLimit(2)
                 }
+                tagsLine
                 if showAccount {
                     Text(store.account(id: transaction.accountID).name)
                         .font(theme.captionFont)
@@ -47,6 +48,23 @@ struct TransactionRow: View {
                 .monospacedDigit()
                 .foregroundStyle(isTransfer ? theme.textSecondary
                                  : transaction.kind == .income ? theme.positive : theme.textPrimary)
+        }
+    }
+
+    /// Capsules des tags : trois au plus, puis « +N ».
+    @ViewBuilder private var tagsLine: some View {
+        let tags = store.tags(of: transaction)
+        if !tags.isEmpty {
+            HStack(spacing: 4) {
+                ForEach(tags.prefix(3)) { tag in
+                    TagChip(text: tag.name, color: theme.color(for: tag), selected: false)
+                }
+                if tags.count > 3 {
+                    Text("+\(tags.count - 3)")
+                        .font(theme.captionFont)
+                        .foregroundStyle(theme.textTertiary)
+                }
+            }
         }
     }
 

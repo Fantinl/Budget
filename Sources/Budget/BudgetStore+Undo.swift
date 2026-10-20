@@ -10,11 +10,12 @@ extension BudgetStore {
         var accounts: [Account]
         var recurringOperations: [RecurringOperation]
         var defaultAccountID: String
+        var tags: [Tag]
     }
 
     private var snapshot: UndoSnapshot {
         UndoSnapshot(transactions: transactions, categories: categories, quickExpenses: quickExpenses,
-                     accounts: accounts, recurringOperations: recurringOperations, defaultAccountID: defaultAccountID)
+                     accounts: accounts, recurringOperations: recurringOperations, defaultAccountID: defaultAccountID, tags: tags)
     }
 
     /// À appeler au début de toute modification faite par l'utilisateur.
@@ -36,6 +37,7 @@ extension BudgetStore {
         accounts = state.accounts
         recurringOperations = state.recurringOperations
         defaultAccountID = state.defaultAccountID
+        tags = state.tags
         saveTransactions()
         saveSettings()
     }

@@ -18,6 +18,7 @@ struct OperationFilter: Equatable {
     var kind: Kind = .all
     var categoryIDs: Set<String> = []
     var accountID: String?
+    var tagIDs: Set<String> = []
     var minAmount: Decimal?
     var maxAmount: Decimal?
 
@@ -31,6 +32,7 @@ struct OperationFilter: Equatable {
         case .transfer: if !t.isTransfer { return false }
         }
         if !categoryIDs.isEmpty, !categoryIDs.contains(t.categoryID) { return false }
+        if !tagIDs.isEmpty, tagIDs.isDisjoint(with: t.tagIDs ?? []) { return false }
         if let accountID, t.resolvedAccountID != accountID { return false }
         if let minAmount, t.amount < minAmount { return false }
         if let maxAmount, t.amount > maxAmount { return false }
@@ -92,6 +94,30 @@ struct FilterForm: View {
                     }
                 }
             }
+            if !store.tags.isEmpty {
+                Section("Tags") {
+                    ForEach(store.tags) { tag in
+                        Button {
+                            if filter.tagIDs.contains(tag.id) {
+                                filter.tagIDs.remove(tag.id)
+                            } else {
+                                filter.tagIDs.insert(tag.id)
+                            }
+                        } label: {
+                            HStack(spacing: theme.spacing) {
+                                Circle().fill(theme.color(for: tag)).frame(width: 12, height: 12)
+                                Text(tag.name).foregroundStyle(theme.textPrimary)
+                                Spacer()
+                                if filter.tagIDs.contains(tag.id) {
+                                    Image(systemName: "checkmark").foregroundStyle(theme.accent)
+                                }
+                            }
+                            .contentShape(.rect)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
             if filter.isActive {
                 Button("Effacer les filtres", role: .destructive) { filter = OperationFilter() }
             }
@@ -116,6 +142,9 @@ struct FilterChips: View {
                     }
                     ForEach(filter.categoryIDs.sorted(), id: \.self) { id in
                         chip(store.category(id: id).label) { filter.categoryIDs.remove(id) }
+                    }
+                    ForEach(store.tags.filter { filter.tagIDs.contains($0.id) }) { tag in
+                        chip("#\(tag.name)") { filter.tagIDs.remove(tag.id) }
                     }
                     if let id = filter.accountID {
                         chip(store.account(id: id).name) { filter.accountID = nil }

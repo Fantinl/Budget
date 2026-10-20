@@ -21,6 +21,11 @@ struct SettingsView: View {
                         Label("Catégories", systemImage: "tag")
                     }
                     NavigationLink {
+                        SettingsTagsView()
+                    } label: {
+                        Label("Tags", systemImage: "number")
+                    }
+                    NavigationLink {
                         SettingsQuickExpensesView()
                     } label: {
                         Label("Dépenses rapides", systemImage: "bolt")

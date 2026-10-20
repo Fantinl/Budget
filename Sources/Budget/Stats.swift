@@ -165,3 +165,13 @@ struct StatsSnapshot {
         topExpenses = Array(spent.sorted { $0.amount > $1.amount }.prefix(5))
     }
 }
+
+extension StatsSnapshot {
+    /// Dépenses (hors virements) d'une catégorie sur [start, end[, de la plus récente à la plus ancienne.
+    static func transactions(in categoryID: String, from transactions: [Transaction],
+                             start: Date, end: Date) -> [Transaction] {
+        transactions
+            .filter { $0.isSpending && $0.categoryID == categoryID && $0.date >= start && $0.date < end }
+            .sorted { $0.date > $1.date }
+    }
+}

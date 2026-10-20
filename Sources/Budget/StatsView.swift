@@ -10,6 +10,12 @@ struct StatsView: View {
     @State private var showIncomeLine = true
     /// Compte analysé ; nil = tous les comptes.
     @State private var accountID: String?
+    /// Catégories dépliées (opérations visibles) et celles montrées en entier.
+    @State private var expandedCategories: Set<String> = []
+    @State private var fullyShown: Set<String> = []
+    @State private var draft: Draft?
+
+    private static let drillDownLimit = 10
 
     init(accountID: String? = nil) {
         _accountID = State(initialValue: accountID)
@@ -50,6 +56,7 @@ struct StatsView: View {
             .frame(maxWidth: .infinity)
         }
         .screenBackground()
+        .sheet(item: $draft) { OperationEditor(draft: $0) }
     }
 
     // MARK: - Période
@@ -213,14 +220,32 @@ struct StatsView: View {
                     }
 
                     VStack(spacing: theme.spacing) {
-                        ForEach(stats.categories) { categoryRow($0) }
+                        ForEach(stats.categories) { categoryRow($0, stats: stats) }
                     }
                 }
             }
         }
     }
 
-    private func categoryRow(_ item: CategoryTotal) -> some View {
+    private func categoryRow(_ item: CategoryTotal, stats: StatsSnapshot) -> some View {
+        let isOpen = expandedCategories.contains(item.id)
+        return VStack(alignment: .leading, spacing: theme.spacing) {
+            Button {
+                withAnimation(.smooth(duration: 0.25)) {
+                    if isOpen { expandedCategories.remove(item.id) } else { expandedCategories.insert(item.id) }
+                }
+            } label: {
+                categoryHeader(item, isOpen: isOpen)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(isOpen ? "Masquer les opérations" : "Afficher les opérations")
+
+            if isOpen { drillDown(item, stats: stats) }
+        }
+    }
+
+    private func categoryHeader(_ item: CategoryTotal, isOpen: Bool) -> some View {
         let color = theme.color(for: item.category)
         return HStack(alignment: .center, spacing: theme.spacing) {
             Image(systemName: item.category.icon)
@@ -241,6 +266,10 @@ struct StatsView: View {
                         .font(theme.captionFont)
                         .foregroundStyle(theme.textSecondary)
                         .frame(width: 40, alignment: .trailing)
+                    Image(systemName: "chevron.right")
+                        .font(theme.captionFont)
+                        .foregroundStyle(theme.textTertiary)
+                        .rotationEffect(.degrees(isOpen ? 90 : 0))
                 }
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
@@ -254,6 +283,48 @@ struct StatsView: View {
                 .frame(height: 4)
             }
         }
+    }
+
+    /// Opérations de la catégorie sur la période affichée (et le compte filtré).
+    private func drillDown(_ item: CategoryTotal, stats: StatsSnapshot) -> some View {
+        let all = StatsSnapshot.transactions(in: item.id, from: transactions, start: stats.start, end: stats.end)
+        let showAll = fullyShown.contains(item.id)
+        let visible = showAll ? all : Array(all.prefix(Self.drillDownLimit))
+        return VStack(alignment: .leading, spacing: 6) {
+            ForEach(visible) { t in
+                Button { draft = Draft(transaction: t, isNew: false) } label: {
+                    HStack(spacing: theme.spacing) {
+                        Text(t.date.formatted(Date.FormatStyle().day().month(.abbreviated).locale(locale)))
+                            .font(theme.captionFont)
+                            .foregroundStyle(theme.textSecondary)
+                            .frame(width: 56, alignment: .leading)
+                        Text(t.note.isEmpty ? item.category.label : t.note)
+                            .font(theme.bodyFont)
+                            .foregroundStyle(theme.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: theme.spacing)
+                        Text(t.amount.euros)
+                            .font(theme.amountFont)
+                            .monospacedDigit()
+                            .foregroundStyle(theme.textPrimary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            if all.count > Self.drillDownLimit {
+                Button(showAll ? "Réduire" : "Voir les \(all.count - Self.drillDownLimit) autres") {
+                    withAnimation(.smooth(duration: 0.25)) {
+                        if showAll { fullyShown.remove(item.id) } else { fullyShown.insert(item.id) }
+                    }
+                }
+                .buttonStyle(.plain)
+                .font(theme.captionFont)
+                .foregroundStyle(theme.accent)
+            }
+        }
+        .padding(.leading, theme.iconSize + theme.spacing)
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     // MARK: - Évolution mensuelle

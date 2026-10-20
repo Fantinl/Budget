@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Élément sélectionné dans la barre latérale.
 enum SidebarItem: Hashable {
-    case operations, accounts, stats
+    case dashboard, operations, accounts, stats
 }
 
 /// Barre latérale : sections de l'app.
@@ -34,6 +34,8 @@ struct SidebarView: View {
 
         List(selection: $selection) {
             Section {
+                SidebarRow(title: "Tableau de bord", symbol: "square.grid.2x2", tint: palette(1), info: nil)
+                    .tag(SidebarItem.dashboard)
                 // Nombre d'opérations du mois en cours uniquement (« 7 en oct. »)
                 SidebarRow(title: "Opérations", symbol: "list.bullet", tint: palette(2),
                            info: showFigures && showMonthCount && !month.isEmpty
