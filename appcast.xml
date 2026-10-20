@@ -6,6 +6,15 @@
     <link>https://github.com/Fantinl/Budget</link>
     <language>fr</language>
     <item>
+      <title>Budget 0.6.0</title>
+      <pubDate>Tue, 20 Oct 2026 23:52:05 +0200</pubDate>
+      <sparkle:version>7</sparkle:version>
+      <sparkle:shortVersionString>0.6.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>Tags sur les opérations (Réglages → Tags, filtres, recherche)</p><p>Tableau de bord en page d&#x27;accueil</p><p>Statistiques : chaque catégorie se déplie pour voir ses opérations</p><p>Izly : un repas décompté par jour, revue chaque semaine, ajout sur une période, opérations regroupées dans le compte Izly</p>]]></description>
+      <enclosure url="https://github.com/Fantinl/Budget/releases/download/v0.6.0/Budget.zip" type="application/octet-stream" sparkle:edSignature="mt3M6hnvheU5HkRPrond0Mx6Ma7dSqJBLOjag+7qHW9I1al/fOJ8S8IVwqXPE0P6rrWmzk0bz4UCj7L/1LxoDQ==" length="6920030" />
+    </item>
+    <item>
       <title>Budget 0.5.0</title>
       <pubDate>Tue, 20 Oct 2026 23:09:54 +0200</pubDate>
       <sparkle:version>6</sparkle:version>
