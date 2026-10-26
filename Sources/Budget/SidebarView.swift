@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Élément sélectionné dans la barre latérale.
 enum SidebarItem: Hashable {
-    case dashboard, operations, accounts, stats
+    case dashboard, operations, accounts, planning, stats
 }
 
 /// Barre latérale : sections de l'app.
@@ -44,6 +44,8 @@ struct SidebarView: View {
                 SidebarRow(title: "Comptes", symbol: "building.columns", tint: palette(0),
                            info: showFigures && showAccountCount ? "\(store.activeAccounts.count)" : nil)
                     .tag(SidebarItem.accounts)
+                SidebarRow(title: "Budget", symbol: "gauge.with.dots.needle.50percent", tint: palette(4), info: nil)
+                    .tag(SidebarItem.planning)
                 SidebarRow(title: "Statistiques", symbol: "chart.pie", tint: palette(3), info: nil)
                     .tag(SidebarItem.stats)
             }
