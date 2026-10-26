@@ -26,9 +26,15 @@ struct Category: Identifiable, Codable, Hashable {
     var isHidden = false          // masquée : n'est plus proposée, mais les anciennes opérations la gardent
     /// Budget mensuel (plafond de dépenses), nil = pas de budget.
     var monthlyBudget: Decimal?
+    /// Budgets propres à un mois (clé « 2026-10 », voir `BudgetStore.monthKey`), prioritaires sur `monthlyBudget`.
+    /// 0 = pas de budget ce mois-là. Absent des anciens fichiers.
+    var budgetOverrides: [String: Decimal]?
+    /// Report : le reste (ou le dépassement) des mois précédents de l'année s'ajoute au budget du mois.
+    var budgetRollover: Bool?
 
     init(id: String = UUID().uuidString, label: String, icon: String, kind: TransactionKind, colorIndex: Int,
-         isHidden: Bool = false, monthlyBudget: Decimal? = nil) {
+         isHidden: Bool = false, monthlyBudget: Decimal? = nil,
+         budgetOverrides: [String: Decimal]? = nil, budgetRollover: Bool? = nil) {
         self.id = id
         self.label = label
         self.icon = icon
@@ -36,6 +42,8 @@ struct Category: Identifiable, Codable, Hashable {
         self.colorIndex = colorIndex
         self.isHidden = isHidden
         self.monthlyBudget = monthlyBudget
+        self.budgetOverrides = budgetOverrides
+        self.budgetRollover = budgetRollover
     }
 
     /// Utilisée quand une opération pointe vers une catégorie supprimée.
@@ -57,6 +65,14 @@ struct Category: Identifiable, Codable, Hashable {
         Category(id: "refund", label: "Remboursement", icon: "arrow.uturn.backward.circle.fill", kind: .income, colorIndex: 10),
         Category(id: "otherIncome", label: "Autre revenu", icon: "plus.circle.fill", kind: .income, colorIndex: 11),
     ]
+}
+
+/// Réglages de la page Budget : ce qui est prévu chaque mois en dehors des enveloppes par catégorie.
+struct BudgetPlan: Codable, Hashable {
+    /// Épargne à mettre de côté chaque mois, nil = aucun objectif.
+    var savingsGoal: Decimal?
+    /// Revenus prévus saisis à la main, nil = estimation automatique (récurrentes, sinon moyenne).
+    var expectedIncome: Decimal?
 }
 
 struct Transaction: Identifiable, Codable, Hashable {

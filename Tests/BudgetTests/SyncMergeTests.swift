@@ -106,6 +106,26 @@ final class SyncMergeTests: XCTestCase {
         XCTAssertEqual(merge(b, a).defaultAccountID, "livret")
     }
 
+    func testBudgetPlanMostRecentWins() {
+        var a = snapshot("A"), b = snapshot("B")
+        a.budgetPlan = BudgetPlan(savingsGoal: 300); a.settingsAt[SyncKey.budgetPlan] = at(2)
+        b.budgetPlan = BudgetPlan(savingsGoal: 150); b.settingsAt[SyncKey.budgetPlan] = at(8)
+        XCTAssertEqual(merge(a, b).budgetPlan?.savingsGoal, 150)
+        XCTAssertEqual(merge(b, a).budgetPlan?.savingsGoal, 150)
+    }
+
+    func testBudgetPlanSurvivesOldRemoteFile() throws {
+        var a = snapshot("A")
+        a.budgetPlan = BudgetPlan(savingsGoal: 300); a.settingsAt[SyncKey.budgetPlan] = at(2)
+        // Fichier écrit par une version sans page Budget : pas de clé budgetPlan.
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: SyncSnapshot.encoder.encode(snapshot("B"))) as? [String: Any])
+        json["budgetPlan"] = nil
+        let old = try SyncSnapshot.decoder.decode(SyncSnapshot.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertNil(old.budgetPlan)
+        XCTAssertEqual(merge(a, old).budgetPlan?.savingsGoal, 300)
+        XCTAssertEqual(merge(old, a).budgetPlan?.savingsGoal, 300)
+    }
+
     func testOldTombstonesArePurged() {
         let old = tx("vieux"), recent = tx("récent")
         let day90: TimeInterval = 90 * 24 * 3600

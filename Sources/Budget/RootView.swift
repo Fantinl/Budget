@@ -105,6 +105,8 @@ struct RootView: View {
             ContentView()
         case .accounts:
             AccountsView()
+        case .planning:
+            BudgetPlanningView()
         case .stats:
             StatsView(accountID: nil)
         }

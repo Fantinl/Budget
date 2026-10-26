@@ -14,6 +14,8 @@ enum SyncKey {
 
     /// Réglages simples (horodatage unique) : compte par défaut et ordre de chaque liste.
     static let defaultAccount = "defaultAccount"
+    /// Objectif d'épargne et revenus prévus (page Budget).
+    static let budgetPlan = "budgetPlan"
     static let orderCategories = "order.categories"
     static let orderAccounts = "order.accounts"
     static let orderQuick = "order.quickExpenses"
@@ -46,6 +48,8 @@ struct SyncSnapshot: Codable, Equatable, Sendable {
     var recurringOperations: [RecurringOperation] = []
     var tags: [Tag] = []
     var defaultAccountID = Account.mainID
+    /// Optionnel : absent des fichiers écrits avant la page Budget.
+    var budgetPlan: BudgetPlan?
     var modifiedAt: [String: Date] = [:]
     var deletedAt: [String: Date] = [:]
     var settingsAt: [String: Date] = [:]
@@ -79,6 +83,7 @@ struct SyncBaseline {
     var tags: [String: Tag] = [:]
     var orders: [String: [String]] = [:]
     var defaultAccountID = Account.mainID
+    var budgetPlan = BudgetPlan()
 }
 
 /// Compare l'état courant au dernier état enregistré et tient les horodatages à jour.
@@ -125,7 +130,7 @@ final class SyncTracker {
         for q in store.quickExpenses { meta.modifiedAt[SyncKey.quick + q.id.uuidString] = date }
         for r in store.recurringOperations { meta.modifiedAt[SyncKey.recurring + r.id.uuidString] = date }
         for t in store.tags { meta.modifiedAt[SyncKey.tag + t.id] = date }
-        for key in [SyncKey.defaultAccount, SyncKey.orderCategories, SyncKey.orderAccounts,
+        for key in [SyncKey.defaultAccount, SyncKey.budgetPlan, SyncKey.orderCategories, SyncKey.orderAccounts,
                     SyncKey.orderQuick, SyncKey.orderTags, SyncKey.orderRecurring] {
             meta.settingsAt[key] = date
         }
@@ -141,6 +146,7 @@ final class SyncTracker {
         b.tags = index(store.tags) { $0.id }
         b.orders = orders(of: store)
         b.defaultAccountID = store.defaultAccountID
+        b.budgetPlan = store.budgetPlan
         return b
     }
 
@@ -183,6 +189,11 @@ final class SyncTracker {
         if base.defaultAccountID != store.defaultAccountID {
             meta.settingsAt[SyncKey.defaultAccount] = now
             base.defaultAccountID = store.defaultAccountID
+            changed = true
+        }
+        if base.budgetPlan != store.budgetPlan {
+            meta.settingsAt[SyncKey.budgetPlan] = now
+            base.budgetPlan = store.budgetPlan
             changed = true
         }
         for (key, ids) in Self.orders(of: store) {

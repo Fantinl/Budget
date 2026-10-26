@@ -11,7 +11,7 @@ extension BudgetStore {
         SyncSnapshot(deviceID: sync.meta.deviceID, date: sync.clock(),
                      transactions: transactions, categories: categories, quickExpenses: quickExpenses,
                      accounts: accounts, recurringOperations: recurringOperations, tags: tags,
-                     defaultAccountID: defaultAccountID, modifiedAt: sync.meta.modifiedAt,
+                     defaultAccountID: defaultAccountID, budgetPlan: budgetPlan, modifiedAt: sync.meta.modifiedAt,
                      deletedAt: sync.meta.deletedAt, settingsAt: sync.meta.settingsAt)
     }
 
@@ -26,6 +26,7 @@ extension BudgetStore {
         let settingsChanged = categories != s.categories || quickExpenses != s.quickExpenses
             || accounts != s.accounts || recurringOperations != s.recurringOperations
             || tags != s.tags || defaultAccountID != s.defaultAccountID
+            || budgetPlan != (s.budgetPlan ?? BudgetPlan())
         if txChanged { transactions = s.transactions }
         if settingsChanged {
             categories = s.categories
@@ -34,6 +35,7 @@ extension BudgetStore {
             recurringOperations = s.recurringOperations
             tags = s.tags
             defaultAccountID = s.defaultAccountID
+            budgetPlan = s.budgetPlan ?? BudgetPlan()
             ensureRequiredRecords()
         }
         if txChanged { saveTransactions() }

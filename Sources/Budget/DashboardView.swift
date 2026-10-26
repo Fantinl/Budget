@@ -120,7 +120,7 @@ struct DashboardView: View {
     }
 
     private func budgetsCard(_ s: DashboardSummary) -> some View {
-        tappable(.stats) {
+        tappable(.planning) {
             title("Budgets")
             ForEach(s.topBudgets) { BudgetProgressRow(status: $0) }
         }

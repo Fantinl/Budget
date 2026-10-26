@@ -35,6 +35,9 @@ enum SyncMerge {
         let (account, accountStamp) = ctx.scalar(SyncKey.defaultAccount, local.defaultAccountID, remote.defaultAccountID)
         out.defaultAccountID = account
         ctx.settingsAt[SyncKey.defaultAccount] = accountStamp
+        let (plan, planStamp) = ctx.scalar(SyncKey.budgetPlan, local.budgetPlan, remote.budgetPlan)
+        out.budgetPlan = plan
+        ctx.settingsAt[SyncKey.budgetPlan] = planStamp
 
         out.modifiedAt = ctx.modifiedAt
         out.settingsAt = ctx.settingsAt.filter { $0.value > .distantPast }

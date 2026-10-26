@@ -14,6 +14,8 @@ import Observation
 final class BudgetStore {
     var transactions: [Transaction] = []
     var categories: [Category] = Category.defaults
+    /// Objectif d'épargne et revenus prévus (page Budget).
+    var budgetPlan = BudgetPlan()
     var quickExpenses: [QuickExpense] = QuickExpense.defaults
     var accounts: [Account] = [.main]
     var recurringOperations: [RecurringOperation] = []
@@ -45,6 +47,7 @@ final class BudgetStore {
         accounts = settings.accounts
         recurringOperations = settings.recurringOperations
         tags = settings.tags
+        budgetPlan = settings.budgetPlan
         defaultAccountID = settings.defaultAccountID
         // Comptes Izly créés avant le décompte automatique : un repas par jour (lun→ven) à partir d'aujourd'hui.
         for index in accounts.indices where accounts[index].kind == .izly && accounts[index].mealPlan == nil {
@@ -94,7 +97,8 @@ final class BudgetStore {
     func transactions(inMonthOf month: Date) -> [Transaction] {
         guard let interval = Calendar.current.dateInterval(of: .month, for: month) else { return [] }
         return transactions
-            .filter { interval.contains($0.date) }
+            // Borne de fin exclue : une opération à minuit le 1er n'appartient qu'au nouveau mois.
+            .filter { $0.date >= interval.start && $0.date < interval.end }
             .sorted { $0.date > $1.date }
     }
 
@@ -225,12 +229,15 @@ final class BudgetStore {
         var recurringOperations: [RecurringOperation] = []
         var defaultAccountID = Account.mainID
         var tags: [Tag] = []
+        var budgetPlan = BudgetPlan()
 
         init() {}
 
         init(categories: [Category], quickExpenses: [QuickExpense], accounts: [Account],
-             recurringOperations: [RecurringOperation], defaultAccountID: String, tags: [Tag]) {
+             recurringOperations: [RecurringOperation], defaultAccountID: String, tags: [Tag],
+             budgetPlan: BudgetPlan = BudgetPlan()) {
             self.tags = tags
+            self.budgetPlan = budgetPlan
             self.categories = categories
             self.quickExpenses = quickExpenses
             self.accounts = accounts
@@ -247,6 +254,7 @@ final class BudgetStore {
             recurringOperations = try c.decodeIfPresent([RecurringOperation].self, forKey: .recurringOperations) ?? []
             defaultAccountID = try c.decodeIfPresent(String.self, forKey: .defaultAccountID) ?? Account.mainID
             tags = try c.decodeIfPresent([Tag].self, forKey: .tags) ?? []
+            budgetPlan = try c.decodeIfPresent(BudgetPlan.self, forKey: .budgetPlan) ?? BudgetPlan()
         }
     }
 
@@ -257,7 +265,8 @@ final class BudgetStore {
 
     func saveSettings() {
         save(Settings(categories: categories, quickExpenses: quickExpenses, accounts: accounts,
-                      recurringOperations: recurringOperations, defaultAccountID: defaultAccountID, tags: tags), to: settingsURL)
+                      recurringOperations: recurringOperations, defaultAccountID: defaultAccountID, tags: tags,
+                      budgetPlan: budgetPlan), to: settingsURL)
         sync.trackSettings(self)
     }
 

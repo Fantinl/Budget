@@ -75,6 +75,13 @@ final class SyncTrackingTests: StoreTestCase {
         XCTAssertEqual(store.sync.meta.settingsAt[SyncKey.defaultAccount], now)
     }
 
+    func testBudgetPlanStamp() {
+        let store = makeTrackedStore()
+        tick()
+        store.setBudgetPlan(BudgetPlan(savingsGoal: 200))
+        XCTAssertEqual(store.sync.meta.settingsAt[SyncKey.budgetPlan], now)
+    }
+
     func testFirstLaunchWithoutMetadataUsesFileDates() throws {
         let store = makeStore()
         let t = expense(5, on: day(2026, 10, 1))
