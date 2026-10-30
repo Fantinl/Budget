@@ -26,6 +26,44 @@ final class MealTests: StoreTestCase {
         XCTAssertEqual(store.account(id: "izly").mealPlan?.lastGeneratedDate, startOfDay(2026, 10, 16))
     }
 
+    func testSameMealIDOnTwoDevices() {
+        let (mac, _) = izlyStore()
+        let phone = BudgetStore(directory: dir.appending(path: "iphone", directoryHint: .isDirectory))
+        var account = Account.makeIzly(id: "izly", existing: phone.accounts, paletteCount: 8)
+        account.mealPlan?.startDate = monday
+        phone.upsertAccount(account)
+        mac.generateDueMeals(now: friday2)
+        phone.generateDueMeals(now: friday2)
+        XCTAssertEqual(Set(meals(mac).map(\.id)), Set(meals(phone).map(\.id)))
+        XCTAssertEqual(Set(meals(mac).map(\.id)).count, 10)
+    }
+
+    func testRemoveDuplicateAutoMealsKeepsFixedID() {
+        let (store, _) = izlyStore()
+        store.generateDueMeals(now: friday2)
+        var copy = meals(store)[0]
+        let fixed = copy.id
+        copy.id = UUID()   // repas du même jour créé par un autre appareil (ancienne version)
+        store.upsert(copy)
+        XCTAssertEqual(meals(store).count, 11)
+        XCTAssertTrue(store.removeDuplicateAutoMeals())
+        XCTAssertEqual(meals(store).count, 10)
+        XCTAssertTrue(meals(store).contains { $0.id == fixed })
+        XCTAssertFalse(store.removeDuplicateAutoMeals())
+    }
+
+    func testRemoveDuplicateAutoMealsWithoutFixedIDIsDeterministic() {
+        let (store, _) = izlyStore()
+        let a = Transaction(id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!, amount: 1, kind: .expense,
+                            categoryID: "restaurants", note: "Repas Crous", date: day(2026, 10, 6), accountID: "izly")
+        var b = a; b.id = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        var meal1 = a; meal1.isAutoMeal = true
+        var meal2 = b; meal2.isAutoMeal = true
+        store.upsert(meal1); store.upsert(meal2)
+        store.removeDuplicateAutoMeals()
+        XCTAssertEqual(meals(store).map(\.id), [b.id], "le plus petit identifiant est gardé, sur chaque appareil")
+    }
+
     func testNoDuplicateOnSecondCall() {
         let (store, _) = izlyStore()
         store.generateDueMeals(now: friday2)

@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 // Repas Izly : décompte automatique d'un repas par jour choisi, revue hebdomadaire et ajout en masse.
 extension BudgetStore {
@@ -70,11 +71,43 @@ extension BudgetStore {
 
     private static func makeMeal(on day: Date, price: Decimal, categoryID: String, accountID: String, calendar: Calendar) -> Transaction {
         var meal = Transaction(
+            id: mealID(accountID: accountID, day: day, calendar: calendar),
             amount: price, kind: .expense, categoryID: categoryID, note: "Repas Crous",
             date: calendar.date(bySettingHour: 12, minute: 0, second: 0, of: day) ?? day,
             accountID: storedAccountID(accountID))
         meal.isAutoMeal = true
         return meal
+    }
+
+    /// Identifiant fixe d'un repas automatique (compte + jour) : le Mac et l'iPhone créent le même
+    /// enregistrement pour un même jour, que la synchronisation fusionne au lieu de le dupliquer.
+    nonisolated static func mealID(accountID: String, day: Date, calendar: Calendar = .current) -> UUID {
+        let c = calendar.dateComponents([.year, .month, .day], from: day)
+        let key = "meal:\(accountID):\(c.year ?? 0)-\(c.month ?? 0)-\(c.day ?? 0)"
+        var bytes = Array(Insecure.SHA1.hash(data: Data(key.utf8)).prefix(16))
+        bytes[6] = (bytes[6] & 0x0F) | 0x50   // UUID version 5 (dérivé d'un nom)
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        return UUID(uuid: (bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+                           bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]))
+    }
+
+    /// Supprime les repas automatiques en double (même compte, même jour), créés par deux appareils
+    /// avant les identifiants fixes. Le choix est le même sur chaque appareil : on garde l'identifiant fixe
+    /// s'il est là, sinon le plus petit. Renvoie vrai si quelque chose a été supprimé.
+    @discardableResult
+    func removeDuplicateAutoMeals(calendar: Calendar = .current) -> Bool {
+        let meals = transactions.filter { $0.isAutoMeal == true }
+        let groups = Dictionary(grouping: meals) { "\($0.resolvedAccountID)|\(calendar.startOfDay(for: $0.date).timeIntervalSince1970)" }
+        var duplicates: Set<UUID> = []
+        for group in groups.values where group.count > 1 {
+            let fixed = Self.mealID(accountID: group[0].resolvedAccountID, day: group[0].date, calendar: calendar)
+            let keep = group.first { $0.id == fixed } ?? group.min { $0.id.uuidString < $1.id.uuidString }
+            duplicates.formUnion(group.map(\.id).filter { $0 != keep?.id })
+        }
+        guard !duplicates.isEmpty else { return false }
+        transactions.removeAll { duplicates.contains($0.id) }
+        saveTransactions()
+        return true
     }
 
     /// Catégorie demandée si elle existe, sinon « Autre ».

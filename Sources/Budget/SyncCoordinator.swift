@@ -169,13 +169,15 @@ final class SyncCoordinator {
         let remote = try await transport.read()
         // L'instantané local est pris après la lecture : on garde ce que l'utilisateur a fait pendant l'attente.
         let local = store.makeSyncSnapshot()
-        let merged: SyncSnapshot
+        var merged: SyncSnapshot
         if let remote, store.isSyncPristine {
             merged = remote   // appareil neuf : on adopte le distant (évite de dupliquer les valeurs par défaut)
         } else {
             merged = SyncMerge.merge(local: local, remote: remote ?? .empty)
         }
         store.applySyncSnapshot(merged)
+        // Repas créés pour le même jour sur deux appareils : on en garde un, la suppression part avec l'envoi.
+        if store.removeDuplicateAutoMeals() { merged = store.makeSyncSnapshot() }
         if remote == nil || !merged.sameContent(as: remote ?? .empty) {
             try await transport.write(merged)
         }
