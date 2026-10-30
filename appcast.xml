@@ -6,6 +6,15 @@
     <link>https://github.com/Fantinl/Budget</link>
     <language>fr</language>
     <item>
+      <title>Budget 0.8.0</title>
+      <pubDate>Fri, 30 Oct 2026 19:13:27 +0100</pubDate>
+      <sparkle:version>9</sparkle:version>
+      <sparkle:shortVersionString>0.8.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>Synchronisation avec l&#x27;iPhone via iCloud Drive, nouvelle page Budget (enveloppes, plan du mois, équilibre de l&#x27;année, suggestions), corrections.</p>]]></description>
+      <enclosure url="https://github.com/Fantinl/Budget/releases/download/v0.8.0/Budget.zip" type="application/octet-stream" sparkle:edSignature="Z/Bnf8NFW3Uux2vNuaujjkk1zHpH7KcTZdmiKtyC/z3b+7oGg/QZdiM1hcQ5YqfYGsDVjLpLOi6K9y3dIUMKCQ==" length="8054388" />
+    </item>
+    <item>
       <title>Budget 0.7.0</title>
       <pubDate>Wed, 21 Oct 2026 00:24:06 +0200</pubDate>
       <sparkle:version>8</sparkle:version>
