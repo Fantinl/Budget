@@ -1,0 +1,13 @@
+{
+  "productName": "Budget Proto",
+  "app": {
+    "windows": [
+      {
+        "title": "Budget Proto",
+        "width": 1100,
+        "height": 760,
+        "minWidth": 720
+      }
+    ]
+  }
+}

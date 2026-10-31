@@ -1,0 +1,71 @@
+name: Windows
+
+# Compile la version Windows (desktop/, Tauri) : vérifications, tests, puis installateur .exe.
+# - à chaque push / pull request qui touche desktop/ : l'installateur est téléchargeable dans l'onglet Actions
+#   (artefact « Budget-Windows ») ;
+# - à chaque release publiée (./release.sh) : l'installateur est ajouté aux fichiers de la release.
+on:
+  push:
+    branches: [main]
+    paths: ["desktop/**", ".github/workflows/windows.yml"]
+  pull_request:
+    branches: [main]
+    paths: ["desktop/**", ".github/workflows/windows.yml"]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Cache de la compilation Rust (dépendances de Tauri).
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+
+      - name: Dépendances
+        run: npm ci
+
+      - name: Types
+        run: npm run check
+
+      - name: Tests
+        run: npm test
+
+      - name: Installateur
+        run: npm run tauri build -- --bundles nsis
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Budget-Windows
+          path: desktop/src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+
+      - name: Ajout à la release
+        if: github.event_name == 'release'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for f in src-tauri/target/release/bundle/nsis/*.exe; do
+            cp "$f" Budget-Windows-Setup.exe
+          done
+          gh release upload "${{ github.event.release.tag_name }}" Budget-Windows-Setup.exe --clobber

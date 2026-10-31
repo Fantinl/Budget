@@ -27,7 +27,17 @@ fi
 # 1. Numéro de version
 BUILD=$(( $(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$PLIST") + 1 ))
 /usr/libexec/PlistBuddy -c "Set CFBundleShortVersionString $VERSION" -c "Set CFBundleVersion $BUILD" "$PLIST"
-git commit -qm "Version $VERSION" "$PLIST"
+# Même numéro pour la version Windows (desktop/) : son installateur est ajouté à la release par GitHub Actions.
+VERSION="$VERSION" python3 - <<'PY'
+import json, os
+for path in ("desktop/src-tauri/tauri.conf.json", "desktop/package.json"):
+    data = json.load(open(path, encoding="utf-8"))
+    data["version"] = os.environ["VERSION"]
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+PY
+git commit -qm "Version $VERSION" "$PLIST" desktop/src-tauri/tauri.conf.json desktop/package.json
 push -q origin main
 
 # 2. Compilation
