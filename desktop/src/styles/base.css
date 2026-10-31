@@ -1,0 +1,114 @@
+/* Styles communs. Les valeurs viennent du thème (src/lib/theme.svelte.ts) via des variables CSS :
+   --background --surface --surface-secondary --separator --text-primary --text-secondary --text-tertiary
+   --accent --positive --negative --warning --on-accent --cat-0…11 --cat-fallback
+   --radius --radius-small --spacing --padding --icon-size --font --large-amount-size …
+   Tailles de texte (équivalents SwiftUI sur Mac) : --body (13px), --caption (11px), --title (14px). */
+
+:root {
+  --body: 13px;
+  --caption: 11px;
+  --title: 14px;
+  --sidebar-width: 250px;
+  font-family: var(--font);
+  font-size: var(--body);
+  color: var(--text-primary);
+  background: var(--background);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body { background: var(--background); }
+
+/* Champs : texte sélectionnable */
+input, textarea, select, [contenteditable] { user-select: text; -webkit-user-select: text; font: inherit; color: inherit; }
+
+/* MARK: Texte */
+.caption { font-size: var(--caption); font-weight: var(--caption-weight); color: var(--text-secondary); }
+.title { font-family: var(--font-display, inherit); font-size: var(--title); font-weight: var(--title-weight); color: var(--text-primary); }
+.secondary { color: var(--text-secondary); }
+.tertiary { color: var(--text-tertiary); }
+.positive { color: var(--positive); }
+.negative { color: var(--negative); }
+.warning { color: var(--warning); }
+.amount { font-family: var(--font-display, inherit); font-weight: var(--amount-weight); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.large-amount { font-family: var(--font-display, inherit); font-size: var(--large-amount-size); font-weight: var(--large-amount-weight); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.nums { font-variant-numeric: tabular-nums; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* MARK: Mise en page */
+.page { padding: var(--padding); max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--spacing); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--spacing); align-items: start; }
+.row { display: flex; align-items: center; gap: var(--spacing); }
+.row.tight { gap: 6px; }
+.col { display: flex; flex-direction: column; gap: var(--spacing); }
+.col.tight { gap: 6px; }
+.spacer { flex: 1; }
+.line { display: flex; align-items: baseline; justify-content: space-between; gap: var(--spacing); }
+
+/* MARK: Boutons et champs (style macOS sobre) */
+button { font: inherit; cursor: default; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 28px; padding: 0 12px; border-radius: var(--radius-small);
+  border: 1px solid var(--separator); background: var(--surface); color: var(--text-primary);
+}
+.btn:hover:not(:disabled) { background: var(--surface-secondary); }
+.btn:disabled { opacity: 0.45; }
+.btn.primary { background: var(--accent); border-color: transparent; color: var(--on-accent); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); }
+.btn.danger { color: var(--negative); }
+.btn.plain { border-color: transparent; background: transparent; }
+.btn.plain:hover:not(:disabled) { background: var(--surface-secondary); }
+.btn.icon { width: 28px; padding: 0; }
+.btn.small { height: 24px; padding: 0 8px; font-size: var(--caption); }
+
+.field, select.field, textarea.field {
+  height: 28px; padding: 0 8px; border-radius: var(--radius-small);
+  border: 1px solid var(--separator); background: var(--surface-secondary); outline: none; min-width: 0;
+}
+textarea.field { height: auto; padding: 6px 8px; resize: vertical; }
+.field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.field.invalid { border-color: var(--negative); }
+label.form-row { display: grid; grid-template-columns: 140px 1fr; align-items: center; gap: var(--spacing); }
+label.form-row > span:first-child { color: var(--text-secondary); }
+
+/* Interrupteur */
+input[type="checkbox"].switch {
+  appearance: none; width: 32px; height: 18px; border-radius: 9px; background: var(--separator);
+  position: relative; transition: background 0.15s; flex-shrink: 0; margin: 0;
+}
+input[type="checkbox"].switch::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; transition: transform 0.15s; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+input[type="checkbox"].switch:checked { background: var(--accent); }
+input[type="checkbox"].switch:checked::after { transform: translateX(14px); }
+
+/* Sélecteur segmenté (Picker .segmented) */
+.segmented { display: inline-flex; padding: 2px; border-radius: var(--radius-small); background: var(--surface-secondary); gap: 2px; }
+.segmented button {
+  border: none; background: transparent; color: var(--text-secondary); height: 24px; padding: 0 10px;
+  border-radius: calc(var(--radius-small) - 2px);
+}
+.segmented button.selected { background: var(--surface); color: var(--text-primary); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12); }
+
+/* Ligne de liste cliquable */
+.list-row { display: flex; align-items: center; gap: var(--spacing); padding: 6px 8px; border-radius: var(--radius-small); }
+.list-row.clickable:hover { background: var(--surface-secondary); }
+.list-row.selected { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.separator { height: 1px; background: var(--separator); border: none; margin: 0; }
+
+/* Jauge (ProgressView) */
+.gauge { height: 6px; border-radius: 3px; background: var(--surface-secondary); overflow: hidden; }
+.gauge > div { height: 100%; border-radius: 3px; background: var(--accent); }
+
+/* Barres de défilement discrètes */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--text-tertiary) 50%, transparent); border-radius: 5px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.empty { color: var(--text-secondary); text-align: center; padding: calc(var(--padding) * 2); }
