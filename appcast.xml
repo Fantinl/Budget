@@ -6,6 +6,15 @@
     <link>https://github.com/Fantinl/Budget</link>
     <language>fr</language>
     <item>
+      <title>Budget 0.9.0</title>
+      <pubDate>Fri, 20 Nov 2026 19:36:30 +0100</pubDate>
+      <sparkle:version>10</sparkle:version>
+      <sparkle:shortVersionString>0.9.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>Page Budget repensée : l&#x27;essentiel en haut (ce qu&#x27;il te reste à dépenser, enveloppes).</p><p>Les charges fixes (loyer, abonnements…) deviennent des enveloppes automatiques et ne sont plus proposées dans les suggestions.</p><p>Plan du mois simplifié : revenus − charges fixes − dépenses courantes − épargne = ce qui reste libre.</p><p>Bilan de l&#x27;année et suggestions rangés dans des sections repliables.</p><p>Version Windows disponible (installateur Budget-Windows-Setup.exe).</p>]]></description>
+      <enclosure url="https://github.com/Fantinl/Budget/releases/download/v0.9.0/Budget.zip" type="application/octet-stream" sparkle:edSignature="vIorFr1mkX/5CPj4OCZIkQHdLQX0t/FuKNBJq8xgSuoRz46jIQEDMmqga3nZOE+qNiAlFc285+mVwwBGYGgKCA==" length="7984847" />
+    </item>
+    <item>
       <title>Budget 0.8.0</title>
       <pubDate>Fri, 30 Oct 2026 19:13:27 +0100</pubDate>
       <sparkle:version>9</sparkle:version>
