@@ -1,12 +1,12 @@
 // Page Budget : plan du mois, équilibre de l'année, projection de fin de mois et suggestions.
 // Port de BudgetStore+Planning.swift. Montants en centimes.
 
-import { type Category, isEarning, isSpending, newID, type Transaction } from "../model";
+import { type Category, isEarning, isSpending, type Transaction } from "../model";
 import { addDays, addMonths, isInMonth, startOfDay, startOfMonth, startOfYear } from "../dates";
 import type { BudgetStore } from "../store.svelte";
 import { occurrences } from "./recurring";
 import {
-  balanceStart, budgetStatuses, daysRemaining, isCurrentMonth, MonthlySpending, plannedBudget, setMonthlyBudget,
+  balanceStart, budgetStatuses, fixedBudgets, daysRemaining, isCurrentMonth, MonthlySpending, plannedBudget, setMonthlyBudget,
 } from "./budgets";
 
 /// Origine des revenus prévus du mois.
@@ -19,24 +19,12 @@ export const incomeSourceLabel: Record<PlannedIncomeSource, string> = {
   none: "Aucun revenu connu",
 };
 
-/// Charge fixe du mois : une échéance de récurrente dont la catégorie n'a pas de budget.
-export interface PlannedCharge {
-  id: string;
-  name: string;
-  categoryID: string;
-  date: Date;
-  amountCents: number;
-}
-
-/// Plan d'un mois : revenus prévus − charges fixes − enveloppes − épargne = reste à répartir.
+/// Plan d'un mois : revenus prévus − enveloppes − épargne = reste à répartir.
 export interface MonthPlan {
   month: Date;
   expectedIncomeCents: number;
   incomeSource: PlannedIncomeSource;
-  /// Charges fixes (récurrentes de dépense hors catégories budgétées), triées par date.
-  fixedCharges: PlannedCharge[];
-  fixedTotalCents: number;
-  /// Somme des budgets disponibles des catégories (report compris).
+  /// Somme des enveloppes du mois (budgets manuels avec report, et enveloppes automatiques).
   envelopesCents: number;
   savingsGoalCents: number;
   /// Réalisé : revenus et dépenses du mois (hors virements).
@@ -164,18 +152,10 @@ export function monthPlan(s: BudgetStore, month: Date, _now: Date = new Date()):
   const statuses = budgetStatuses(s, monthStart);
   const budgeted = new Set(statuses.map(x => x.id));
 
-  const charges: PlannedCharge[] = [];
   let recurringIncome = 0;
   for (const operation of s.recurringOperations) {
-    if (!operation.isActive) continue;
-    const dates = occurrences(operation, monthStart, lastDay);
-    if (operation.kind === "income") {
-      recurringIncome += operation.amountCents * dates.length;
-    } else if (!budgeted.has(operation.categoryID)) {
-      for (const date of dates) {
-        charges.push({ id: newID(), name: operation.name, categoryID: operation.categoryID, date, amountCents: operation.amountCents });
-      }
-    } // sinon : déjà compté dans l'enveloppe de sa catégorie
+    if (!operation.isActive || operation.kind !== "income") continue;
+    recurringIncome += operation.amountCents * occurrences(operation, monthStart, lastDay).length;
   }
 
   let income = 0;
@@ -190,16 +170,14 @@ export function monthPlan(s: BudgetStore, month: Date, _now: Date = new Date()):
 
   const actualIncome = sum(monthTransactions.filter(isEarning));
   const spending = monthTransactions.filter(isSpending);
-  const fixedCharges = charges.sort((a, b) => a.date.getTime() - b.date.getTime());
-  const fixedTotal = fixedCharges.reduce((n, c) => n + c.amountCents, 0);
   const envelopes = statuses.reduce((n, x) => n + x.budget, 0);
   const savingsGoal = Math.max(0, s.budgetPlan.savingsGoalCents ?? 0);
   const actualSpent = sum(spending);
   return {
-    month: monthStart, expectedIncomeCents: income, incomeSource: source, fixedCharges, fixedTotalCents: fixedTotal,
+    month: monthStart, expectedIncomeCents: income, incomeSource: source,
     envelopesCents: envelopes, savingsGoalCents: savingsGoal, actualIncomeCents: actualIncome, actualSpentCents: actualSpent,
     unbudgetedSpentCents: sum(spending.filter(t => !budgeted.has(t.categoryID))),
-    unallocatedCents: income - fixedTotal - envelopes - savingsGoal,
+    unallocatedCents: income - envelopes - savingsGoal,
     actualSavingsCents: actualIncome - actualSpent,
   };
 }
@@ -222,9 +200,15 @@ export function annualBudgetBalance(s: BudgetStore, year: Date, now: Date = new 
   const currentMonth = startOfMonth(now);
   const spending = new MonthlySpending(s.transactions, yearStart, addMonths(yearStart, 12));
 
-  const categoriesInYear = s.categories.filter(c => c.kind === "expense" && months.some(m => plannedBudget(c, m) > 0));
+  // Enveloppe d'un mois : budget manuel s'il existe, sinon budget automatique (calculé une fois par mois).
+  const fixedByMonth = months.map(m => fixedBudgets(s, m));
+  const envelope = (c: Category, i: number) => {
+    const manual = plannedBudget(c, months[i]);
+    return manual > 0 ? manual : fixedByMonth[i].get(c.id) ?? 0;
+  };
+  const categoriesInYear = s.categories.filter(c => c.kind === "expense" && months.some((_, i) => envelope(c, i) > 0));
   const rows = categoriesInYear
-    .map(c => makeAnnualRow(c, months.map(m => makeCell(m, plannedBudget(c, m), spending.spent(c.id, m), firstCounted, currentMonth))))
+    .map(c => makeAnnualRow(c, months.map((m, i) => makeCell(m, envelope(c, i), spending.spent(c.id, m), firstCounted, currentMonth))))
     .sort((a, b) => a.balance - b.balance);   // les plus en retard d'abord
 
   const totalCells = months.map((m, i) =>
@@ -276,9 +260,12 @@ export function budgetSuggestions(s: BudgetStore, now: Date = new Date()): Budge
   const analysed = months.filter(m => spending.hasData(m));
   if (analysed.length === 0) return [];
 
+  const fixed = fixedBudgets(s, current);
   const result: BudgetSuggestion[] = [];
   for (const category of s.categories) {
     if (category.kind !== "expense" || category.isHidden) continue;
+    // Enveloppe automatique ce mois-ci (pas de budget manuel, mais des récurrentes) : rien à proposer
+    if (plannedBudget(category, current) <= 0 && (fixed.get(category.id) ?? 0) > 0) continue;
     const amounts = analysed.map(m => spending.spent(category.id, m));
     const average = amounts.reduce((a, b) => a + b, 0) / analysed.length;
     const budget = category.monthlyBudgetCents ?? 0;

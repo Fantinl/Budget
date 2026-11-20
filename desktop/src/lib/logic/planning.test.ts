@@ -6,7 +6,7 @@ import { type Kind, newID, type RecurringOperation } from "../model";
 import { startOfDay } from "../dates";
 import { decodeSettings, encodeSettings } from "../codec";
 import {
-  budgetedCategories, budgetStatus, budgetStatuses, budgetTotals, daysRemaining, removeBudget, plannedBudget,
+  budgetedCategories, budgetStatus, fixedBudgets, budgetStatuses, budgetTotals, daysRemaining, removeBudget, plannedBudget,
   setBudgetOverride, setBudgetPlan, setBudgetRollover, setMonthlyBudget, spentIn,
 } from "./budgets";
 import { annualBudgetBalance, applySuggestion, budgetSuggestions, monthPlan, projectedSpending, roundedBudget } from "./planning";
@@ -119,8 +119,68 @@ describe("équilibre annuel", () => {
   });
 });
 
+describe("enveloppes automatiques", () => {
+  async function fixedStore() {
+    const s = await makeStore();
+    s.recurringOperations = [
+      recurring("Loyer", 600, "expense", "housing", day(2026, 1, 5)),
+      recurring("Cantine", 50, "expense", "restaurants", day(2026, 1, 2)),
+    ];
+    return s;
+  }
+
+  it("une récurrente sans budget crée une enveloppe fixe", async () => {
+    const s = await fixedStore();
+    const fixed = fixedBudgets(s, now);
+    expect(fixed.get("housing")).toBe(60000);
+    expect(fixed.get("restaurants")).toBe(5000);
+    s.upsert(expense(600, "housing", day(2026, 10, 5)));
+    const status = budgetStatus(s, s.category("housing"), now)!;
+    expect(status.isFixed).toBe(true);
+    expect(status.budget).toBe(60000);
+    expect(status.ratio).toBe(1);
+    expect(status.state).toBe("ok");
+    expect(budgetedCategories(s, now).map(c => c.id)).toContain("housing");
+  });
+
+  it("dépassée si on dépense plus, jamais en attention", async () => {
+    const s = await fixedStore();
+    s.upsert(expense(500, "housing", day(2026, 10, 5)));
+    expect(budgetStatus(s, s.category("housing"), now)!.state).toBe("ok");
+    s.upsert(expense(200, "housing", day(2026, 10, 6)));
+    expect(budgetStatus(s, s.category("housing"), now)!.state).toBe("exceeded");
+  });
+
+  it("ignorée si la catégorie a un budget manuel, sans report", async () => {
+    const s = await fixedStore();
+    setBudget(s, "restaurants", 200);
+    expect(fixedBudgets(s, now).has("restaurants")).toBe(false);
+    const status = budgetStatus(s, s.category("restaurants"), now)!;
+    expect(status.isFixed).toBe(false);
+    expect(status.budget).toBe(20000);
+    expect(budgetStatus(s, s.category("housing"), now)!.carryOver).toBe(0);
+  });
+
+  it("compte dans les totaux, le tableau de bord exclut les fixes", async () => {
+    const s = await fixedStore();
+    setBudget(s, "groceries", 300);
+    expect(budgetTotals(s, now).budget).toBe(60000 + 5000 + 30000);
+  });
+
+  it("exclue des suggestions, comptée dans l'équilibre annuel", async () => {
+    const s = await fixedStore();
+    for (const m of [7, 8, 9]) s.upsert(expense(600, "housing", day(2026, m, 5)));
+    expect(budgetSuggestions(s, now).some(x => x.id === "housing")).toBe(false);
+    const row = annualBudgetBalance(s, now, now).rows.find(r => r.id === "housing")!;
+    expect(row.cells[9].planned).toBe(60000);
+    expect(row.cells[8].spent).toBe(60000);
+    s.recurringOperations = [];
+    expect(budgetSuggestions(s, now).some(x => x.id === "housing")).toBe(true);
+  });
+});
+
 describe("plan du mois", () => {
-  it("exclut les récurrentes budgétées des charges fixes", async () => {
+  it("compte les charges fixes dans les enveloppes", async () => {
     const s = await makeStore();
     setBudget(s, "restaurants", 200);
     s.recurringOperations = [
@@ -132,8 +192,7 @@ describe("plan du mois", () => {
     const plan = monthPlan(s, now, now);
     expect(plan.incomeSource).toBe("recurring");
     expect(plan.expectedIncomeCents).toBe(150000);
-    expect(plan.fixedCharges.map(c => c.name)).toEqual(["Loyer"]);
-    expect(plan.envelopesCents).toBe(20000);
+    expect(plan.envelopesCents).toBe(80000);   // 200 (manuel) + 600 (loyer automatique)
     expect(plan.unallocatedCents).toBe((1500 - 600 - 200 - 300) * 100);
 
     setBudgetPlan(s, { savingsGoalCents: 30000, expectedIncomeCents: 200000 });

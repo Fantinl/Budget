@@ -115,9 +115,64 @@ final class BudgetPlanningTests: StoreTestCase {
         XCTAssertEqual(row?.catchUpPerMonth, 0)
     }
 
+    // MARK: - Enveloppes automatiques
+
+    func testFixedEnvelopeFromRecurringWithoutBudget() {
+        let store = makeStore()
+        store.recurringOperations = [recurring("Loyer", 600, category: "housing", start: day(2026, 1, 5))]
+        XCTAssertEqual(store.fixedBudgets(month: now), ["housing": 600])
+        XCTAssertEqual(store.budgetedCategories(month: now).map(\.id), ["housing"])
+        store.upsert(expense(600, "housing", on: day(2026, 10, 5)))
+        let status = store.budgetStatuses(month: now).first
+        XCTAssertEqual(status?.isFixed, true)
+        XCTAssertEqual(status?.budget, 600)
+        XCTAssertEqual(status?.carryOver, 0)
+        XCTAssertEqual(status?.state, .ok)   // 100 % : jamais « warning »
+        XCTAssertEqual(store.budgetTotals(month: now).budget, 600)
+        XCTAssertEqual(store.budgetTotals(month: now).spent, 600)
+
+        store.upsert(expense(50, "housing", on: day(2026, 10, 6)))
+        XCTAssertEqual(store.budgetStatuses(month: now).first?.state, .exceeded)
+    }
+
+    func testFixedEnvelopeIgnoredWithManualBudget() {
+        let store = makeStore()
+        store.recurringOperations = [recurring("Loyer", 600, category: "housing", start: day(2026, 1, 5))]
+        setBudget(store, "housing", 700)
+        XCTAssertTrue(store.fixedBudgets(month: now).isEmpty)
+        let status = store.budgetStatuses(month: now).first
+        XCTAssertEqual(status?.isFixed, false)
+        XCTAssertEqual(status?.budget, 700)
+    }
+
+    func testFixedEnvelopeExcludedFromSuggestionsButManualStaysNormal() {
+        let store = makeStore()
+        store.recurringOperations = [recurring("Loyer", 600, category: "housing", start: day(2026, 1, 5)),
+                                     recurring("Cantine", 50, category: "restaurants", start: day(2026, 1, 2))]
+        for month in 7...9 {
+            store.upsert(expense(600, "housing", on: day(2026, month, 5)))
+            store.upsert(expense(300, "restaurants", on: day(2026, month, 10)))
+        }
+        setBudget(store, "restaurants", 100)
+        let ids = store.budgetSuggestions(now: now).map(\.id)
+        XCTAssertFalse(ids.contains("housing"))
+        XCTAssertTrue(ids.contains("restaurants"))
+    }
+
+    func testFixedEnvelopeCountsInAnnualBalance() {
+        let store = makeStore()
+        store.recurringOperations = [recurring("Loyer", 600, category: "housing", start: day(2026, 1, 5))]
+        store.upsert(expense(600, "housing", on: day(2026, 10, 5)))
+        let balance = store.annualBudgetBalance(year: now, now: now)
+        let row = balance.rows.first { $0.id == "housing" }
+        XCTAssertNotNil(row)
+        XCTAssertEqual(row?.cells.first { $0.isCurrent }?.planned, 600)
+        XCTAssertEqual(balance.total.cells.first { $0.isCurrent }?.planned, 600)
+    }
+
     // MARK: - Plan du mois
 
-    func testMonthPlanExcludesBudgetedRecurringFromFixedCharges() {
+    func testMonthPlanCountsFixedEnvelopes() {
         let store = makeStore()
         setBudget(store, "restaurants", 200)
         store.recurringOperations = [
@@ -129,9 +184,8 @@ final class BudgetPlanningTests: StoreTestCase {
         let plan = store.monthPlan(month: now, now: now)
         XCTAssertEqual(plan.incomeSource, .recurring)
         XCTAssertEqual(plan.expectedIncome, 1500)
-        XCTAssertEqual(plan.fixedCharges.map(\.name), ["Loyer"])
-        XCTAssertEqual(plan.envelopes, 200)
-        XCTAssertEqual(plan.unallocated, 1500 - 600 - 200 - 300)
+        XCTAssertEqual(plan.envelopes, 800)   // restaurants 200 + enveloppe automatique du loyer 600
+        XCTAssertEqual(plan.unallocated, 1500 - 800 - 300)
 
         store.setBudgetPlan(BudgetPlan(savingsGoal: 300, expectedIncome: 2000))
         XCTAssertEqual(store.monthPlan(month: now, now: now).incomeSource, .manual)

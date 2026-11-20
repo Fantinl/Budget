@@ -40,7 +40,7 @@ struct DashboardSummary {
             topBudgets = []
         } else {
             budgetTotals = store.budgetTotals(month: now)
-            topBudgets = Array(store.budgetStatuses(month: now).prefix(3))
+            topBudgets = Array(store.budgetStatuses(month: now).filter { !$0.isFixed }.prefix(3))
         }
 
         if let account = active.first(where: { $0.kind == .izly }) {

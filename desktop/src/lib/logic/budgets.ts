@@ -2,8 +2,9 @@
 // Calculés sur tous les comptes, virements exclus. Montants en centimes (les moyennes peuvent être fractionnaires).
 
 import { type Category, isSpending, type Transaction } from "../model";
-import { addMonths, daysInMonth, isInMonth, monthKey, startOfMonth, startOfYear } from "../dates";
+import { addDays, addMonths, daysInMonth, isInMonth, monthKey, startOfMonth, startOfYear } from "../dates";
 import type { BudgetStore } from "../store.svelte";
+import { occurrences } from "./recurring";
 
 /// État d'un budget : < 80 % ok, 80–100 % attention, > 100 % dépassé.
 export type BudgetState = "ok" | "warning" | "exceeded";
@@ -25,15 +26,18 @@ export interface BudgetStatus {
   ratio: number;
   state: BudgetState;
   overspent: number;
+  /// Vrai pour une enveloppe automatique (charges fixes : récurrentes sans budget manuel) : sans report, jamais « warning ».
+  isFixed: boolean;
 }
 
-export function makeBudgetStatus(category: Category, spent: number, planned: number, carryOver = 0): BudgetStatus {
-  const budget = Math.max(0, planned + carryOver);
+export function makeBudgetStatus(category: Category, spent: number, planned: number, carryOver = 0, isFixed = false): BudgetStatus {
+  const carry = isFixed ? 0 : carryOver;
+  const budget = Math.max(0, planned + carry);
   // Report qui a tout absorbé : la moindre dépense dépasse
   const ratio = budget > 0 ? spent / budget : spent > 0 ? 2 : 0;
-  const state: BudgetState = ratio > 1 ? "exceeded" : ratio >= 0.8 ? "warning" : "ok";
-  return { id: category.id, category, spent, planned, carryOver, budget, remaining: budget - spent, ratio, state,
-           overspent: Math.max(0, spent - budget) };
+  const state: BudgetState = ratio > 1 ? "exceeded" : !isFixed && ratio >= 0.8 ? "warning" : "ok";
+  return { id: category.id, category, spent, planned, carryOver: carry, budget, remaining: budget - spent, ratio, state,
+           overspent: Math.max(0, spent - budget), isFixed };
 }
 
 /// Totaux sur l'ensemble des catégories budgétées.
@@ -119,9 +123,49 @@ export function hasBudgetOverride(category: Category, month: Date): boolean {
   return category.budgetOverridesCents?.[monthKey(month)] !== undefined;
 }
 
-/// Catégories de dépense ayant un budget > 0 ce mois-ci (visibles ou non, tant qu'un budget existe).
+/// Échéance d'une récurrente de dépense qui alimente une enveloppe automatique.
+export interface FixedOccurrence {
+  name: string;
+  date: Date;
+  amountCents: number;
+}
+
+/// Échéances du mois des récurrentes actives de dépense dont la catégorie n'a pas de budget manuel ce mois-là,
+/// par catégorie, triées par date. Calculées une seule fois par mois.
+export function fixedOccurrences(s: BudgetStore, month: Date): Map<string, FixedOccurrence[]> {
+  const first = startOfMonth(month);
+  const last = addDays(addMonths(first, 1), -1);
+  const manual = new Map(s.categories.map(c => [c.id, plannedBudget(c, first)] as const));
+  const result = new Map<string, FixedOccurrence[]>();
+  for (const op of s.recurringOperations) {
+    if (!op.isActive || op.kind !== "expense") continue;
+    const planned = manual.get(op.categoryID);
+    if (planned === undefined || planned > 0) continue;
+    for (const date of occurrences(op, first, last)) {
+      const list = result.get(op.categoryID) ?? [];
+      list.push({ name: op.name, date, amountCents: op.amountCents });
+      result.set(op.categoryID, list);
+    }
+  }
+  for (const list of result.values()) list.sort((a, b) => a.date.getTime() - b.date.getTime());
+  return result;
+}
+
+/// Budget automatique d'un mois : catégorie → somme des échéances des récurrentes de dépense, pour les catégories
+/// sans budget manuel ce mois-là (seuls les montants > 0 sont gardés).
+export function fixedBudgets(s: BudgetStore, month: Date): Map<string, number> {
+  const result = new Map<string, number>();
+  for (const [id, list] of fixedOccurrences(s, month)) {
+    const total = list.reduce((n, o) => n + o.amountCents, 0);
+    if (total > 0) result.set(id, total);
+  }
+  return result;
+}
+
+/// Catégories de dépense ayant une enveloppe > 0 ce mois-ci (budget manuel ou automatique).
 export function budgetedCategories(s: BudgetStore, month: Date = new Date()): Category[] {
-  return s.categories.filter(c => plannedBudget(c, month) > 0);
+  const fixed = fixedBudgets(s, month);
+  return s.categories.filter(c => plannedBudget(c, month) > 0 || (fixed.get(c.id) ?? 0) > 0);
 }
 
 /// Premier mois compté dans l'équilibre de l'année de `month` : janvier, ou le premier mois
@@ -158,22 +202,28 @@ export function yearSpending(s: BudgetStore, month: Date): MonthlySpending {
   return new MonthlySpending(s.transactions, start.getTime() < ms.getTime() ? start : ms, end);
 }
 
-function statusWith(s: BudgetStore, category: Category, month: Date, spending: MonthlySpending): BudgetStatus | null {
+function statusWith(s: BudgetStore, category: Category, month: Date, spending: MonthlySpending,
+                    fixed: Map<string, number>): BudgetStatus | null {
   const planned = plannedBudget(category, month);
-  if (!(planned > 0)) return null;
-  return makeBudgetStatus(category, spending.spent(category.id, month), planned, carryOver(s, category, month, spending));
+  if (planned > 0) {
+    return makeBudgetStatus(category, spending.spent(category.id, month), planned, carryOver(s, category, month, spending));
+  }
+  const automatic = fixed.get(category.id) ?? 0;
+  if (!(automatic > 0)) return null;
+  return makeBudgetStatus(category, spending.spent(category.id, month), automatic, 0, true);
 }
 
 export function budgetStatus(s: BudgetStore, category: Category, month: Date): BudgetStatus | null {
-  return statusWith(s, category, month, yearSpending(s, month));
+  return statusWith(s, category, month, yearSpending(s, month), fixedBudgets(s, month));
 }
 
 /// Statuts de toutes les catégories budgétées, du plus consommé au moins consommé.
 export function budgetStatuses(s: BudgetStore, month: Date): BudgetStatus[] {
   const spending = yearSpending(s, month);
+  const fixed = fixedBudgets(s, month);
   const result: BudgetStatus[] = [];
-  for (const c of budgetedCategories(s, month)) {
-    const status = statusWith(s, c, month, spending);
+  for (const c of s.categories) {
+    const status = statusWith(s, c, month, spending, fixed);
     if (status) result.push(status);
   }
   return result.sort((a, b) => b.ratio - a.ratio);

@@ -5,6 +5,11 @@ func budgetEuros(_ value: Decimal) -> String {
     value.formatted(.currency(code: "EUR").locale(Locale(identifier: "fr_FR")).precision(.fractionLength(0...2)))
 }
 
+/// Montant arrondi à l'euro (« 120 € »).
+func wholeEuros(_ value: Decimal) -> String {
+    value.formatted(.currency(code: "EUR").locale(Locale(identifier: "fr_FR")).precision(.fractionLength(0)))
+}
+
 /// Ligne de budget : pastille, nom, barre de progression, « dépensé / budget ».
 struct BudgetProgressRow: View {
     @Environment(\.theme) private var theme

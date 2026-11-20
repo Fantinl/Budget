@@ -6,6 +6,8 @@ struct AnnualBalanceCard: View {
     @Environment(\.theme) private var theme
     @Environment(BudgetStore.self) private var store
     let year: Date
+    /// Contenu d'une section repliable : ni carte ni titre.
+    var embedded = false
 
     // Dimensions du tableau
     private let nameWidth: CGFloat = 150
@@ -17,21 +19,22 @@ struct AnnualBalanceCard: View {
     var body: some View {
         let balance = store.annualBudgetBalance(year: year)
         let yearNumber = Calendar.current.component(.year, from: balance.year)
-        Card {
-            VStack(alignment: .leading, spacing: theme.spacing) {
+        let content = VStack(alignment: .leading, spacing: theme.spacing) {
+            if !embedded {
                 Text("Équilibre \(String(yearNumber))")
                     .font(theme.titleFont)
                     .foregroundStyle(theme.textPrimary)
-                if balance.rows.isEmpty {
-                    emptyState
-                } else {
-                    summary(balance.total)
-                    if !balance.total.counted.isEmpty { chart(balance) }
-                    heatmap(balance)
-                    legend
-                }
+            }
+            if balance.rows.isEmpty {
+                emptyState
+            } else {
+                summary(balance.total)
+                if !balance.total.counted.isEmpty { chart(balance) }
+                heatmap(balance)
+                legend
             }
         }
+        if embedded { content } else { Card { content } }
     }
 
     // MARK: - État vide

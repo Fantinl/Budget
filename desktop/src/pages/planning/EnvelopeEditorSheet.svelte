@@ -4,7 +4,7 @@
   import { amountInput } from "../../lib/format";
   import { monthTitle } from "../../lib/format";
   import { evaluate } from "../../lib/logic/amountExpression";
-  import { plannedBudget, removeBudget, setBudgetOverride, setBudgetRollover, setMonthlyBudget } from "../../lib/logic/budgets";
+  import { budgetEuros, fixedOccurrences, plannedBudget, removeBudget, setBudgetOverride, setBudgetRollover, setMonthlyBudget } from "../../lib/logic/budgets";
   import { monthKey } from "../../lib/dates";
   import CategoryBadge from "../../ui/CategoryBadge.svelte";
   import Sheet from "../../ui/Sheet.svelte";
@@ -32,6 +32,15 @@
   const monthName = $derived(monthTitle(month).toLowerCase());
   const removable = $derived(category !== null && (plannedBudget(category, month) > 0 || category.monthlyBudgetCents !== null));
 
+  /// Échéances qui forment l'enveloppe automatique (aucun budget manuel ce mois-ci).
+  const fixedNote = $derived.by(() => {
+    if (!category || plannedBudget(category, month) > 0) return null;
+    const list = fixedOccurrences(store, month).get(category.id) ?? [];
+    if (list.length === 0) return null;
+    const detail = list.map(o => `${o.name} ${budgetEuros(o.amountCents)} le ${o.date.getDate()}`).join(", ");
+    return `Enveloppe automatique : somme de tes dépenses récurrentes de ce mois (${detail}). Fixe un budget pour la remplacer.`;
+  });
+
   function save() {
     if (!category || !canSave) return;
     setMonthlyBudget(store, defaultValue, category);
@@ -53,6 +62,8 @@
       <CategoryBadge icon={category.icon} colorIndex={category.colorIndex} size={40} />
       <span class="title">{category.label}</span>
     </div>
+
+    {#if fixedNote}<span class="caption">{fixedNote}</span>{/if}
 
     <label class="col tight">
       <span class="title">Tous les mois</span>

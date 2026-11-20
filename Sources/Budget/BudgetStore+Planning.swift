@@ -23,23 +23,12 @@ enum PlannedIncomeSource {
     }
 }
 
-/// Charge fixe du mois : une échéance de récurrente dont la catégorie n'a pas de budget.
-struct PlannedCharge: Identifiable {
-    let id = UUID()
-    let name: String
-    let categoryID: String
-    let date: Date
-    let amount: Decimal
-}
-
-/// Plan d'un mois : revenus prévus − charges fixes − enveloppes − épargne = reste à répartir.
+/// Plan d'un mois : revenus prévus − enveloppes (fixes comprises) − épargne = reste à répartir.
 struct MonthPlan {
     let month: Date
     let expectedIncome: Decimal
     let incomeSource: PlannedIncomeSource
-    /// Charges fixes (récurrentes de dépense hors catégories budgétées), triées par date.
-    let fixedCharges: [PlannedCharge]
-    /// Somme des budgets disponibles des catégories (report compris).
+    /// Somme des enveloppes (manuelles et automatiques, report compris).
     let envelopes: Decimal
     let savingsGoal: Decimal
     /// Réalisé : revenus et dépenses du mois (hors virements).
@@ -48,9 +37,8 @@ struct MonthPlan {
     /// Dépenses du mois dans des catégories sans budget (charges fixes comprises).
     let unbudgetedSpent: Decimal
 
-    var fixedTotal: Decimal { fixedCharges.reduce(0) { $0 + $1.amount } }
     /// Reste à répartir (négatif = plan déficitaire).
-    var unallocated: Decimal { expectedIncome - fixedTotal - envelopes - savingsGoal }
+    var unallocated: Decimal { expectedIncome - envelopes - savingsGoal }
     /// Épargne réelle du mois à ce jour.
     var actualSavings: Decimal { actualIncome - actualSpent }
 }
@@ -172,25 +160,20 @@ extension BudgetStore {
     // MARK: - Plan du mois
 
     func monthPlan(month: Date, now: Date = .now) -> MonthPlan {
-        let cal = Calendar.current
         let monthStart = month.startOfMonth
-        let lastDay = cal.date(byAdding: .day, value: -1, to: monthStart.addingMonths(1)) ?? monthStart
+        let lastDay = Calendar.current.date(byAdding: .day, value: -1, to: monthStart.addingMonths(1)) ?? monthStart
         let monthTransactions = transactions(inMonthOf: monthStart)
         let statuses = budgetStatuses(month: monthStart)
         let budgeted = Set(statuses.map(\.id))
 
-        var charges: [PlannedCharge] = []
         var recurringIncome: Decimal = 0
         for operation in recurringOperations where operation.isActive {
             let dates = occurrences(of: operation, from: monthStart, to: lastDay)
             switch operation.kind {
             case .income:
                 recurringIncome += operation.amount * Decimal(dates.count)
-            case .expense where !budgeted.contains(operation.categoryID):
-                charges += dates.map { PlannedCharge(name: operation.name, categoryID: operation.categoryID,
-                                                     date: $0, amount: operation.amount) }
             case .expense:
-                break   // déjà compté dans l'enveloppe de sa catégorie
+                break   // compté dans l'enveloppe de sa catégorie (manuelle ou automatique)
             }
         }
 
@@ -209,7 +192,6 @@ extension BudgetStore {
         let actualIncome = monthTransactions.filter(\.isEarning).reduce(Decimal(0)) { $0 + $1.amount }
         let spending = monthTransactions.filter(\.isSpending)
         return MonthPlan(month: monthStart, expectedIncome: income, incomeSource: source,
-                         fixedCharges: charges.sorted { $0.date < $1.date },
                          envelopes: statuses.reduce(0) { $0 + $1.budget },
                          savingsGoal: max(0, budgetPlan.savingsGoal ?? 0),
                          actualIncome: actualIncome,
@@ -236,12 +218,16 @@ extension BudgetStore {
         let currentMonth = now.startOfMonth
         let spending = MonthlySpending(transactions: transactions, from: yearStart, to: yearStart.addingMonths(12))
 
+        let fixedByMonth = months.map { fixedBudgets(month: $0) }
+        func planned(_ category: Category, _ index: Int) -> Decimal {
+            envelopeAmount(for: category, month: months[index], fixed: fixedByMonth[index])
+        }
         let categoriesInYear = categories.filter { category in
-            category.kind == .expense && months.contains { plannedBudget(for: category, month: $0) > 0 }
+            category.kind == .expense && months.indices.contains { planned(category, $0) > 0 }
         }
         let rows = categoriesInYear.map { category in
-            AnnualBudgetRow(category: category, cells: months.map { month in
-                AnnualBudgetCell(month: month, planned: plannedBudget(for: category, month: month),
+            AnnualBudgetRow(category: category, cells: months.enumerated().map { index, month in
+                AnnualBudgetCell(month: month, planned: planned(category, index),
                                  spent: spending.spent(category.id, month: month),
                                  isCounted: month >= firstCounted && month <= currentMonth,
                                  isCurrent: month == currentMonth, isFuture: month > currentMonth)
@@ -294,8 +280,11 @@ extension BudgetStore {
         let analysed = months.filter { spending.hasData($0) }
         guard !analysed.isEmpty else { return [] }
 
+        let fixed = fixedBudgets(month: current)
         return categories.compactMap { category -> BudgetSuggestion? in
             guard category.kind == .expense, !category.isHidden else { return nil }
+            // Enveloppe automatique (charge fixe) ce mois-ci : pas de budget à proposer.
+            guard plannedBudget(for: category, month: current) > 0 || (fixed[category.id] ?? 0) == 0 else { return nil }
             let amounts = analysed.map { spending.spent(category.id, month: $0) }
             let average = amounts.reduce(0, +) / Decimal(analysed.count)
             let budget = category.monthlyBudget ?? 0

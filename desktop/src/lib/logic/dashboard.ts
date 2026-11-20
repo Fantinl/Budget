@@ -48,7 +48,7 @@ export function makeDashboardSummary(s: BudgetStore, now: Date = new Date()): Da
   if (budgetedCategories(s, now).length > 0) {
     const statuses = budgetStatuses(s, now);
     totals = totalsOf(statuses);
-    topBudgets = statuses.slice(0, 3);
+    topBudgets = statuses.filter(x => !x.isFixed).slice(0, 3);
   }
 
   let izly: DashboardSummary["izly"] = null;

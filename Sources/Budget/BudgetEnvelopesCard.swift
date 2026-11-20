@@ -5,23 +5,47 @@ private struct EnvelopeTarget: Identifiable {
     let id: String
 }
 
-/// Carte « Enveloppes » : budgets par catégorie du mois, avec rythme, projection et report.
+/// Menu « Ajouter un budget » : catégories de dépense visibles sans budget ce mois-ci, puis l'éditeur.
+struct AddBudgetMenu: View {
+    @Environment(\.theme) private var theme
+    @Environment(BudgetStore.self) private var store
+    let month: Date
+    @State private var editing: EnvelopeTarget?
+
+    var body: some View {
+        let budgeted = Set(store.budgetStatuses(month: month).map(\.id))   // fixes comprises
+        let others = store.categories.filter { $0.kind == .expense && !$0.isHidden && !budgeted.contains($0.id) }
+        Group {
+            if !others.isEmpty {
+                Menu {
+                    ForEach(others) { category in
+                        Button(category.label) { editing = EnvelopeTarget(id: category.id) }
+                    }
+                } label: {
+                    Label("Ajouter un budget", systemImage: "plus.circle")
+                        .font(theme.captionFont)
+                        .foregroundStyle(theme.accent)
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+            }
+        }
+        .sheet(item: $editing) { EnvelopeEditorSheet(categoryID: $0.id, month: month) }
+    }
+}
+
+/// Carte « Enveloppes » : charges fixes (enveloppes automatiques) puis dépenses courantes, éditeur au clic.
 struct BudgetEnvelopesCard: View {
     @Environment(\.theme) private var theme
     @Environment(BudgetStore.self) private var store
     let month: Date
     @State private var editing: EnvelopeTarget?
 
-    private var isCurrent: Bool { BudgetStore.isCurrentMonth(month) }
-
-    /// Catégories de dépense visibles qui n'ont pas de budget ce mois-ci.
-    private func unbudgeted(_ statuses: [BudgetStatus]) -> [Category] {
-        let budgeted = Set(statuses.map(\.id))
-        return store.categories.filter { $0.kind == .expense && !$0.isHidden && !budgeted.contains($0.id) }
-    }
-
     var body: some View {
         let statuses = store.budgetStatuses(month: month)
+        let fixed = statuses.filter(\.isFixed)
+        let flexible = statuses.filter { !$0.isFixed }
+        let occurrences = store.fixedOccurrences(month: month)
         Card {
             VStack(alignment: .leading, spacing: theme.spacing) {
                 Text("Enveloppes")
@@ -32,58 +56,58 @@ struct BudgetEnvelopesCard: View {
                         .font(theme.captionFont)
                         .foregroundStyle(theme.textSecondary)
                 } else {
-                    ForEach(statuses) { status in
-                        Button { editing = EnvelopeTarget(id: status.id) } label: {
-                            EnvelopeRow(status: status, month: month, isCurrent: isCurrent)
-                                .contentShape(Rectangle())
+                    if !fixed.isEmpty {
+                        let spent = fixed.reduce(Decimal(0)) { $0 + $1.spent }
+                        let budget = fixed.reduce(Decimal(0)) { $0 + $1.budget }
+                        HStack {
+                            Text("Charges fixes")
+                            Spacer(minLength: theme.spacing)
+                            Text("payé \(wholeEuros(spent)) sur \(wholeEuros(budget))").monospacedDigit()
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityHint("Modifier le budget")
+                        .font(theme.captionFont)
+                        .foregroundStyle(theme.textSecondary)
+                        ForEach(fixed) { row($0, occurrences: occurrences[$0.id] ?? []) }
                     }
-                }
-                let others = unbudgeted(statuses)
-                if !others.isEmpty {
-                    Menu {
-                        ForEach(others) { category in
-                            Button(category.label) { editing = EnvelopeTarget(id: category.id) }
+                    if !flexible.isEmpty {
+                        if !fixed.isEmpty {
+                            Text("Dépenses courantes")
+                                .font(theme.captionFont)
+                                .foregroundStyle(theme.textSecondary)
                         }
-                    } label: {
-                        Label("Ajouter un budget", systemImage: "plus.circle")
-                            .font(theme.captionFont)
-                            .foregroundStyle(theme.accent)
+                        ForEach(flexible) { row($0, occurrences: []) }
                     }
-                    .menuStyle(.borderlessButton)
-                    .fixedSize()
                 }
-                if !statuses.isEmpty {
-                    Divider().overlay(theme.separator)
-                    let spent = statuses.reduce(Decimal(0)) { $0 + $1.spent }
-                    let available = statuses.reduce(Decimal(0)) { $0 + $1.budget }
-                    HStack {
-                        Text("Total")
-                            .font(theme.captionFont)
-                            .foregroundStyle(theme.textSecondary)
-                        Spacer()
-                        Text("\(budgetEuros(spent)) / \(budgetEuros(available))")
-                            .font(theme.captionFont)
-                            .monospacedDigit()
-                            .foregroundStyle(spent > available ? theme.negative : theme.textPrimary)
-                    }
-                    .accessibilityElement(children: .combine)
-                }
+                AddBudgetMenu(month: month)
             }
         }
         .sheet(item: $editing) { EnvelopeEditorSheet(categoryID: $0.id, month: month) }
     }
+
+    private func row(_ status: BudgetStatus, occurrences: [BudgetStore.FixedOccurrence]) -> some View {
+        Button { editing = EnvelopeTarget(id: status.id) } label: {
+            EnvelopeRow(status: status, upcomingDay: upcomingDay(occurrences))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Modifier le budget")
+    }
+
+    /// Jour de la prochaine échéance à venir (après aujourd'hui, mois en cours seulement).
+    private func upcomingDay(_ occurrences: [BudgetStore.FixedOccurrence]) -> Int? {
+        guard BudgetStore.isCurrentMonth(month) else { return nil }
+        let cal = Calendar.current
+        let now = Date.now
+        guard let next = occurrences.first(where: { $0.date > now && !cal.isDate($0.date, inSameDayAs: now) }) else { return nil }
+        return cal.component(.day, from: next.date)
+    }
 }
 
-/// Une enveloppe : jauge avec repère du rythme, reste, rythme possible et projection.
+/// Une enveloppe : pastille, libellé, barre fine et « reste X € » ou « dépassé de X € ».
 private struct EnvelopeRow: View {
     @Environment(\.theme) private var theme
-    @Environment(BudgetStore.self) private var store
     let status: BudgetStatus
-    let month: Date
-    let isCurrent: Bool
+    /// Jour de la prochaine échéance à venir (enveloppes fixes).
+    var upcomingDay: Int?
 
     private var barColor: Color {
         switch status.state {
@@ -93,109 +117,57 @@ private struct EnvelopeRow: View {
         }
     }
 
-    private var projected: Decimal? { store.projectedSpending(for: status.category, month: month) }
-    private var projectedOver: Bool { (projected ?? 0) > status.budget && status.state != .exceeded }
+    private var exceeded: Bool { status.state == .exceeded }
+    private var paid: Bool { status.isFixed && !exceeded && status.spent >= status.budget }
+
+    private var trailing: String {
+        if exceeded { return "dépassé de \(wholeEuros(status.overspent))" }
+        if paid { return "✓ payé" }
+        if status.isFixed, let upcomingDay { return "reste \(wholeEuros(status.remaining)) · le \(upcomingDay)" }
+        return "reste \(wholeEuros(status.remaining))"
+    }
 
     var body: some View {
-        HStack(alignment: .top, spacing: theme.spacing) {
+        HStack(spacing: theme.spacing) {
             CategoryBadge(category: status.category)
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text(status.category.label)
                         .font(theme.bodyFont)
-                        .foregroundStyle(status.state == .exceeded ? theme.negative : theme.textPrimary)
+                        .foregroundStyle(theme.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: theme.spacing)
-                    Text("\(budgetEuros(status.spent)) / \(budgetEuros(status.budget))")
+                    Text(trailing)
                         .font(theme.captionFont)
                         .monospacedDigit()
-                        .foregroundStyle(status.state == .exceeded ? theme.negative : theme.textSecondary)
+                        .foregroundStyle(exceeded ? theme.negative : paid ? theme.positive : theme.textSecondary)
                         .lineLimit(1)
                 }
                 gauge
-                if status.state == .exceeded {
-                    Text("Dépassé de \(budgetEuros(status.overspent))")
-                        .font(theme.captionFont)
-                        .foregroundStyle(theme.negative)
-                } else {
-                    Text(remainingText)
-                        .font(theme.captionFont)
-                        .foregroundStyle(theme.textSecondary)
-                }
-                if let projected {
-                    Text("Fin de mois estimée : \(budgetEuros(projected))")
-                        .font(theme.captionFont)
-                        .foregroundStyle(projectedOver ? theme.warning : theme.textSecondary)
-                }
-                chips
             }
             Image(systemName: "chevron.right")
                 .font(.caption2)
                 .foregroundStyle(theme.textTertiary)
-                .padding(.top, 4)
                 .accessibilityHidden(true)
         }
         .accessibilityElement(children: .combine)
     }
 
-    private var remainingText: String {
-        var text = "Reste \(budgetEuros(status.remaining))"
-        let days = BudgetStore.daysRemaining(in: month)
-        if isCurrent, days > 0 {
-            text += " · \(budgetEuros(status.remaining / Decimal(days))) / jour possible"
-        }
-        return text
-    }
-
-    /// Jauge de consommation, avec un repère vertical sur la part du mois écoulée.
+    /// Barre fine de consommation.
     private var gauge: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: theme.smallCornerRadius / 2).fill(theme.surfaceSecondary)
-                RoundedRectangle(cornerRadius: theme.smallCornerRadius / 2).fill(barColor)
+                Capsule().fill(theme.surfaceSecondary)
+                Capsule().fill(barColor)
                     .frame(width: geo.size.width * min(1, max(0, status.ratio)))
-                if isCurrent {
-                    let x = geo.size.width * min(1, max(0, BudgetStore.elapsedFraction(of: month)))
-                    Capsule().fill(theme.textPrimary.opacity(0.7))
-                        .frame(width: 2, height: 11)
-                        .offset(x: min(max(0, x - 1), geo.size.width - 2))
-                        .accessibilityHidden(true)
-                }
-            }
-            .frame(height: 5)
-            .frame(maxHeight: .infinity)
-        }
-        .frame(height: 11)
-    }
-
-    @ViewBuilder private var chips: some View {
-        let hasChips = status.carryOver != 0 || store.hasBudgetOverride(for: status.category, month: month)
-        if hasChips {
-            HStack(spacing: 6) {
-                if status.carryOver != 0 {
-                    let amount = budgetEuros(abs(status.carryOver))
-                    chip(status.carryOver > 0 ? "+\(amount) reportés" : "−\(amount) reportés",
-                         color: status.carryOver > 0 ? theme.positive : theme.negative)
-                }
-                if store.hasBudgetOverride(for: status.category, month: month) {
-                    chip("Budget de ce mois", color: theme.accent)
-                }
             }
         }
-    }
-
-    private func chip(_ text: String, color: Color) -> some View {
-        Text(text)
-            .font(theme.captionFont)
-            .foregroundStyle(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
-            .background(color.opacity(0.14), in: Capsule())
+        .frame(height: 5)
     }
 }
 
 /// Éditeur de budget : par défaut, propre au mois, report, retrait.
-private struct EnvelopeEditorSheet: View {
+struct EnvelopeEditorSheet: View {
     @Environment(BudgetStore.self) private var store
     @Environment(\.theme) private var theme
     @Environment(\.dismiss) private var dismiss
@@ -225,6 +197,16 @@ private struct EnvelopeEditorSheet: View {
         month.formatted(.dateTime.month(.wide).year().locale(Locale(identifier: "fr_FR")))
     }
 
+    /// Note d'une enveloppe automatique : les récurrentes du mois qui la composent.
+    private func fixedNote(_ category: Category) -> String? {
+        guard store.hasFixedEnvelope(for: category, month: month),
+              let items = store.fixedOccurrences(month: month)[category.id], !items.isEmpty else { return nil }
+        let cal = Calendar.current
+        let list = items.map { "\($0.name) \(wholeEuros($0.amount)) le \(cal.component(.day, from: $0.date))" }
+            .joined(separator: ", ")
+        return "Enveloppe automatique : somme de tes dépenses récurrentes de ce mois (\(list)). Fixe un budget pour la remplacer."
+    }
+
     private func text(for value: Decimal) -> String {
         "\(value)".replacingOccurrences(of: ".", with: ",")
     }
@@ -238,6 +220,9 @@ private struct EnvelopeEditorSheet: View {
                             CategoryBadge(category: category, size: 40)
                             Text(category.label).font(theme.titleFont)
                         }
+                    }
+                    if let note = fixedNote(category) {
+                        Section { Text(note).font(theme.captionFont).foregroundStyle(theme.textSecondary) }
                     }
                     Section {
                         TextField("Budget par défaut (€ / mois)", text: $defaultText)
@@ -321,29 +306,32 @@ private struct EnvelopeEditorSheet: View {
 struct BudgetSuggestionsCard: View {
     @Environment(\.theme) private var theme
     @Environment(BudgetStore.self) private var store
+    /// Contenu d'une section repliable : ni carte ni titre.
+    var embedded = false
 
     var body: some View {
         let suggestions = store.budgetSuggestions()
         if !suggestions.isEmpty {
-            Card {
-                VStack(alignment: .leading, spacing: theme.spacing) {
-                    HStack {
+            let content = VStack(alignment: .leading, spacing: theme.spacing) {
+                HStack {
+                    if !embedded {
                         Text("Suggestions")
                             .font(theme.titleFont)
                             .foregroundStyle(theme.textPrimary)
-                        Spacer()
-                        if suggestions.count > 1 {
-                            Button("Tout appliquer") { suggestions.forEach(store.apply) }
-                                .buttonStyle(.plain)
-                                .font(theme.captionFont)
-                                .foregroundStyle(theme.accent)
-                        }
                     }
-                    ForEach(suggestions) { suggestion in
-                        row(suggestion)
+                    Spacer()
+                    if suggestions.count > 1 {
+                        Button("Tout appliquer") { suggestions.forEach(store.apply) }
+                            .buttonStyle(.plain)
+                            .font(theme.captionFont)
+                            .foregroundStyle(theme.accent)
                     }
                 }
+                ForEach(suggestions) { suggestion in
+                    row(suggestion)
+                }
             }
+            if embedded { content } else { Card { content } }
         }
     }
 

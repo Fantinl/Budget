@@ -26,7 +26,7 @@ describe("pages", () => {
     const plan = render(PlanningPage).body;
     expect(plan).toContain("Plan du mois");
     expect(plan).toContain("Enveloppes");
-    expect(plan).toContain("Équilibre");
+    expect(plan).toContain("Bilan de l’année");
     const stats = render(StatsView).body;
     expect(stats).toContain("Par catégorie");
     expect(stats).toContain("Évolution mensuelle");

@@ -137,7 +137,7 @@ struct MenuBarPanel: View {
     // MARK: Budgets
 
     @ViewBuilder private var budgets: some View {
-        let statuses = Array(store.budgetStatuses(month: .now).prefix(3))
+        let statuses = Array(store.budgetStatuses(month: .now).filter { !$0.isFixed }.prefix(3))
         if !statuses.isEmpty {
             VStack(alignment: .leading, spacing: theme.spacing) {
                 Text("Budgets").font(theme.captionFont).foregroundStyle(theme.textSecondary)

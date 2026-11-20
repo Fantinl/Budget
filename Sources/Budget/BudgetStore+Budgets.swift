@@ -9,16 +9,20 @@ enum BudgetState {
 struct BudgetStatus: Identifiable {
     let category: Category
     let spent: Decimal
-    /// Budget prévu pour ce mois (budget du mois s'il existe, sinon budget par défaut).
+    /// Budget prévu pour ce mois (budget du mois s'il existe, sinon budget par défaut,
+    /// sinon somme des récurrentes de la catégorie pour une enveloppe automatique).
     let planned: Decimal
     /// Report des mois précédents de l'année (positif = reste, négatif = dépassement), 0 sans report.
     var carryOver: Decimal = 0
+    /// Enveloppe automatique (charge fixe) : montant tiré des dépenses récurrentes, sans budget manuel.
+    var isFixed: Bool = false
 
-    init(category: Category, spent: Decimal, planned: Decimal, carryOver: Decimal = 0) {
+    init(category: Category, spent: Decimal, planned: Decimal, carryOver: Decimal = 0, isFixed: Bool = false) {
         self.category = category
         self.spent = spent
         self.planned = planned
-        self.carryOver = carryOver
+        self.carryOver = isFixed ? 0 : carryOver
+        self.isFixed = isFixed
     }
 
     var id: String { category.id }
@@ -32,6 +36,7 @@ struct BudgetStatus: Identifiable {
     }
     var state: BudgetState {
         if ratio > 1 { return .exceeded }
+        if isFixed { return .ok }   // un loyer payé = 100 % et c'est normal
         if ratio >= 0.8 { return .warning }
         return .ok
     }
@@ -91,14 +96,57 @@ extension BudgetStore {
         return max(0, category.monthlyBudget ?? 0)
     }
 
+    /// Échéance d'une dépense récurrente active tombant dans un mois.
+    struct FixedOccurrence {
+        let name: String
+        let date: Date
+        let amount: Decimal
+    }
+
+    /// Échéances du mois des récurrentes de dépense actives, par catégorie de dépense sans budget manuel ce mois-là.
+    /// Calculées en une seule passe sur les récurrentes.
+    func fixedOccurrences(month: Date) -> [String: [FixedOccurrence]] {
+        let cal = Calendar.current
+        let start = month.startOfMonth
+        let last = cal.date(byAdding: .day, value: -1, to: start.addingMonths(1)) ?? start
+        var manual: [String: Bool] = [:]
+        for category in categories { manual[category.id] = category.kind == .expense && plannedBudget(for: category, month: start) == 0 }
+        var result: [String: [FixedOccurrence]] = [:]
+        for operation in recurringOperations where operation.isActive && operation.kind == .expense {
+            guard manual[operation.categoryID] == true else { continue }
+            for date in occurrences(of: operation, from: start, to: last) {
+                result[operation.categoryID, default: []].append(FixedOccurrence(name: operation.name, date: date, amount: operation.amount))
+            }
+        }
+        return result.mapValues { $0.sorted { $0.date < $1.date } }
+    }
+
+    /// Budgets automatiques du mois : catégorie → somme des récurrentes de dépense, pour les catégories sans budget manuel.
+    func fixedBudgets(month: Date) -> [String: Decimal] {
+        fixedOccurrences(month: month).mapValues { $0.reduce(0) { $0 + $1.amount } }.filter { $0.value > 0 }
+    }
+
+    /// Vrai si la catégorie a une enveloppe automatique ce mois-ci (pas de budget manuel, récurrentes > 0).
+    func hasFixedEnvelope(for category: Category, month: Date) -> Bool {
+        plannedBudget(for: category, month: month) == 0 && (fixedBudgets(month: month)[category.id] ?? 0) > 0
+    }
+
     /// Vrai si la catégorie a un budget propre à ce mois (différent du budget par défaut).
     func hasBudgetOverride(for category: Category, month: Date) -> Bool {
         category.budgetOverrides?[Self.monthKey(month)] != nil
     }
 
-    /// Catégories de dépense ayant un budget > 0 ce mois-ci (visibles ou non, tant qu'un budget existe).
+    /// Montant d'enveloppe d'une catégorie : budget manuel s'il est > 0, sinon budget automatique.
+    func envelopeAmount(for category: Category, month: Date, fixed: [String: Decimal]) -> Decimal {
+        let manual = plannedBudget(for: category, month: month)
+        if manual > 0 { return manual }
+        return category.kind == .expense ? fixed[category.id] ?? 0 : 0
+    }
+
+    /// Catégories de dépense ayant une enveloppe > 0 ce mois-ci (manuelle ou automatique).
     func budgetedCategories(month: Date) -> [Category] {
-        categories.filter { plannedBudget(for: $0, month: month) > 0 }
+        let fixed = fixedBudgets(month: month)
+        return categories.filter { envelopeAmount(for: $0, month: month, fixed: fixed) > 0 }
     }
 
     /// Catégories budgétées pour le mois en cours.
@@ -130,14 +178,18 @@ extension BudgetStore {
     }
 
     func budgetStatus(for category: Category, month: Date) -> BudgetStatus? {
-        budgetStatus(for: category, month: month, spending: yearSpending(through: month))
+        budgetStatus(for: category, month: month, spending: yearSpending(through: month), fixed: fixedBudgets(month: month))
     }
 
-    private func budgetStatus(for category: Category, month: Date, spending: MonthlySpending) -> BudgetStatus? {
-        let planned = plannedBudget(for: category, month: month)
+    private func budgetStatus(for category: Category, month: Date, spending: MonthlySpending,
+                              fixed: [String: Decimal]) -> BudgetStatus? {
+        let manual = plannedBudget(for: category, month: month)
+        let planned = envelopeAmount(for: category, month: month, fixed: fixed)
         guard planned > 0 else { return nil }
+        let isFixed = manual == 0
         return BudgetStatus(category: category, spent: spending.spent(category.id, month: month), planned: planned,
-                            carryOver: carryOver(for: category, month: month, spending: spending))
+                            carryOver: isFixed ? 0 : carryOver(for: category, month: month, spending: spending),
+                            isFixed: isFixed)
     }
 
     /// Index des dépenses du début de l'année de `month` jusqu'à la fin de ce mois.
@@ -150,8 +202,9 @@ extension BudgetStore {
     /// Statuts de toutes les catégories budgétées, du plus consommé au moins consommé.
     func budgetStatuses(month: Date) -> [BudgetStatus] {
         let spending = yearSpending(through: month)
-        return budgetedCategories(month: month)
-            .compactMap { budgetStatus(for: $0, month: month, spending: spending) }
+        let fixed = fixedBudgets(month: month)
+        return categories
+            .compactMap { budgetStatus(for: $0, month: month, spending: spending, fixed: fixed) }
             .sorted { $0.ratio > $1.ratio }
     }
 

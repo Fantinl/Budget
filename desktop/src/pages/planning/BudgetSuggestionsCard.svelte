@@ -3,7 +3,6 @@
   import { store } from "../../lib/app.svelte";
   import { budgetEuros } from "../../lib/logic/budgets";
   import { applySuggestion, budgetSuggestions, suggestionReasonLabel } from "../../lib/logic/planning";
-  import Card from "../../ui/Card.svelte";
   import CategoryBadge from "../../ui/CategoryBadge.svelte";
 
   const suggestions = $derived(budgetSuggestions(store));
@@ -14,13 +13,12 @@
 </script>
 
 {#if suggestions.length > 0}
-  <Card>
-    <div class="line center">
-      <span class="title">Suggestions</span>
-      {#if suggestions.length > 1}
+  <div class="inner">
+    {#if suggestions.length > 1}
+      <div class="line center end">
         <button type="button" class="link caption" onclick={applyAll}>Tout appliquer</button>
-      {/if}
-    </div>
+      </div>
+    {/if}
     {#each suggestions as suggestion (suggestion.id)}
       <div class="item">
         <CategoryBadge icon={suggestion.category.icon} colorIndex={suggestion.category.colorIndex} />
@@ -38,10 +36,12 @@
                 onclick={() => applySuggestion(store, suggestion)}>Appliquer</button>
       </div>
     {/each}
-  </Card>
+  </div>
 {/if}
 
 <style>
+  .inner { display: flex; flex-direction: column; gap: var(--spacing); }
+  .end { justify-content: flex-end; }
   .center { align-items: center; }
   .link { border: none; background: transparent; padding: 0; color: var(--accent); }
   .item { display: flex; align-items: flex-start; gap: var(--spacing); }

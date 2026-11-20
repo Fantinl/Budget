@@ -6,13 +6,11 @@
   import { budgetEuros } from "../../lib/logic/budgets";
   import { type AnnualBudgetCell, type AnnualBudgetRow, type AnnualBudgetTrend, annualBudgetBalance, trendLabel } from "../../lib/logic/planning";
   import { monotonePath, niceTicks } from "../stats/chart";
-  import Card from "../../ui/Card.svelte";
   import CategoryBadge from "../../ui/CategoryBadge.svelte";
 
   let { year }: { year: Date } = $props();
 
   const balance = $derived(annualBudgetBalance(store, year));
-  const yearNumber = $derived(balance.year.getFullYear());
   const total = $derived(balance.total);
 
   // MARK: Formats
@@ -116,8 +114,7 @@
   </div>
 {/snippet}
 
-<Card>
-  <span class="title">Équilibre {yearNumber}</span>
+<div class="inner">
   {#if balance.rows.length === 0}
     <span class="secondary">Aucune catégorie n'a de budget cette année. Définis des budgets pour suivre ton équilibre.</span>
   {:else}
@@ -182,9 +179,10 @@
       <span class="row tight"><i class="ring"></i>En cours</span>
     </div>
   {/if}
-</Card>
+</div>
 
 <style>
+  .inner { display: flex; flex-direction: column; gap: var(--spacing); }
   .chart { width: 100%; }
   .chart svg { display: block; }
   .axis { font-size: var(--caption); fill: var(--text-secondary); }
